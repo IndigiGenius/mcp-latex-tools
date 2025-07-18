@@ -1,0 +1,378 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP LaTeX Tools Schema",
+  "description": "JSON Schema definitions for MCP LaTeX Tools server",
+  "version": "1.0.0",
+  
+  "definitions": {
+    "CompilationResult": {
+      "type": "object",
+      "description": "Result of LaTeX compilation operation",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "description": "True if compilation succeeded"
+        },
+        "output_path": {
+          "type": ["string", "null"],
+          "description": "Path to generated PDF file"
+        },
+        "error_message": {
+          "type": ["string", "null"],
+          "description": "Error description if compilation failed"
+        },
+        "log_content": {
+          "type": ["string", "null"],
+          "description": "Full LaTeX compilation log"
+        },
+        "compilation_time_seconds": {
+          "type": ["number", "null"],
+          "description": "Time taken for compilation in seconds"
+        }
+      },
+      "required": ["success"],
+      "additionalProperties": false
+    },
+    
+    "ValidationResult": {
+      "type": "object",
+      "description": "Result of LaTeX validation operation",
+      "properties": {
+        "is_valid": {
+          "type": "boolean",
+          "description": "True if LaTeX syntax is valid"
+        },
+        "error_message": {
+          "type": ["string", "null"],
+          "description": "Error description if validation failed"
+        },
+        "errors": {
+          "type": "array",
+          "description": "List of validation errors",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "description": "List of validation warnings",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["is_valid", "errors"],
+      "additionalProperties": false
+    },
+    
+    "PDFInfoResult": {
+      "type": "object",
+      "description": "Result of PDF metadata extraction",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "description": "True if PDF analysis succeeded"
+        },
+        "error_message": {
+          "type": ["string", "null"],
+          "description": "Error description if analysis failed"
+        },
+        "file_path": {
+          "type": "string",
+          "description": "Path to analyzed PDF file"
+        },
+        "file_size_bytes": {
+          "type": "integer",
+          "description": "File size in bytes"
+        },
+        "page_count": {
+          "type": "integer",
+          "description": "Number of pages in PDF"
+        },
+        "page_dimensions": {
+          "type": "array",
+          "description": "Dimensions of each page",
+          "items": {
+            "type": "object",
+            "properties": {
+              "width": {"type": "number"},
+              "height": {"type": "number"},
+              "unit": {"type": "string", "enum": ["pt", "in", "cm", "mm"]}
+            }
+          }
+        },
+        "pdf_version": {
+          "type": ["string", "null"],
+          "description": "PDF version (e.g., '1.4')"
+        },
+        "is_encrypted": {
+          "type": "boolean",
+          "description": "True if PDF is encrypted"
+        },
+        "is_linearized": {
+          "type": ["boolean", "null"],
+          "description": "True if PDF is linearized for web"
+        },
+        "creation_date": {
+          "type": ["string", "null"],
+          "description": "PDF creation date (ISO 8601 format)"
+        },
+        "modification_date": {
+          "type": ["string", "null"],
+          "description": "PDF modification date (ISO 8601 format)"
+        }
+      },
+      "required": ["success", "file_path", "file_size_bytes", "page_count", "is_encrypted"],
+      "additionalProperties": false
+    },
+    
+    "CleanupResult": {
+      "type": "object",
+      "description": "Result of LaTeX cleanup operation",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "description": "True if cleanup succeeded"
+        },
+        "error_message": {
+          "type": ["string", "null"],
+          "description": "Error description if cleanup failed"
+        },
+        "tex_file_path": {
+          "type": ["string", "null"],
+          "description": "Path to LaTeX file being cleaned"
+        },
+        "directory_path": {
+          "type": ["string", "null"],
+          "description": "Path to directory being cleaned"
+        },
+        "cleaned_files_count": {
+          "type": "integer",
+          "description": "Number of files cleaned"
+        },
+        "cleaned_files": {
+          "type": "array",
+          "description": "List of files that were cleaned",
+          "items": {
+            "type": "string"
+          }
+        },
+        "would_clean_files": {
+          "type": "array",
+          "description": "List of files that would be cleaned (dry run)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dry_run": {
+          "type": "boolean",
+          "description": "True if this was a dry run (no files deleted)"
+        },
+        "recursive": {
+          "type": "boolean",
+          "description": "True if cleanup was recursive"
+        },
+        "backup_created": {
+          "type": "boolean",
+          "description": "True if backup was created"
+        },
+        "backup_directory": {
+          "type": ["string", "null"],
+          "description": "Path to backup directory"
+        },
+        "cleanup_time_seconds": {
+          "type": ["number", "null"],
+          "description": "Time taken for cleanup in seconds"
+        }
+      },
+      "required": ["success", "cleaned_files_count", "cleaned_files", "would_clean_files", "dry_run", "recursive", "backup_created"],
+      "additionalProperties": false
+    }
+  },
+  
+  "tools": {
+    "compile_latex": {
+      "description": "Compile LaTeX documents to PDF with comprehensive error handling",
+      "input": {
+        "type": "object",
+        "properties": {
+          "tex_path": {
+            "type": "string",
+            "description": "Path to the LaTeX (.tex) file to compile"
+          },
+          "output_dir": {
+            "type": "string",
+            "description": "Directory for output PDF (optional, defaults to same directory as input)"
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Compilation timeout in seconds (optional, default: 30)",
+            "minimum": 1,
+            "maximum": 300
+          },
+          "engine": {
+            "type": "string",
+            "description": "LaTeX engine to use (optional, default: pdflatex)",
+            "enum": ["pdflatex", "xelatex", "lualatex"]
+          }
+        },
+        "required": ["tex_path"],
+        "additionalProperties": false
+      },
+      "output": {
+        "$ref": "#/definitions/CompilationResult"
+      }
+    },
+    
+    "validate_latex": {
+      "description": "Validate LaTeX syntax without full compilation",
+      "input": {
+        "type": "object",
+        "properties": {
+          "tex_path": {
+            "type": "string",
+            "description": "Path to the LaTeX (.tex) file to validate"
+          },
+          "mode": {
+            "type": "string",
+            "description": "Validation mode (optional, default: quick)",
+            "enum": ["quick", "strict"]
+          }
+        },
+        "required": ["tex_path"],
+        "additionalProperties": false
+      },
+      "output": {
+        "$ref": "#/definitions/ValidationResult"
+      }
+    },
+    
+    "pdf_info": {
+      "description": "Extract PDF metadata and document information",
+      "input": {
+        "type": "object",
+        "properties": {
+          "pdf_path": {
+            "type": "string",
+            "description": "Path to the PDF file to analyze"
+          }
+        },
+        "required": ["pdf_path"],
+        "additionalProperties": false
+      },
+      "output": {
+        "$ref": "#/definitions/PDFInfoResult"
+      }
+    },
+    
+    "cleanup": {
+      "description": "Clean LaTeX auxiliary files",
+      "input": {
+        "type": "object",
+        "properties": {
+          "tex_path": {
+            "type": "string",
+            "description": "Path to LaTeX file or directory to clean"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true, show what would be cleaned without deleting (default: false)"
+          },
+          "recursive": {
+            "type": "boolean",
+            "description": "If true, clean recursively in subdirectories (default: false)"
+          },
+          "backup": {
+            "type": "boolean",
+            "description": "If true, create backup before cleaning (default: false)"
+          },
+          "extensions": {
+            "type": "array",
+            "description": "Custom file extensions to clean (optional)",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["tex_path"],
+        "additionalProperties": false
+      },
+      "output": {
+        "$ref": "#/definitions/CleanupResult"
+      }
+    }
+  },
+  
+  "performance_metrics": {
+    "type": "object",
+    "description": "Performance characteristics and benchmarks",
+    "properties": {
+      "compilation_times": {
+        "type": "object",
+        "description": "Typical compilation times by document type",
+        "properties": {
+          "simple_paper": {
+            "type": "object",
+            "properties": {
+              "pages": {"type": "string", "example": "1-2"},
+              "time_seconds": {"type": "string", "example": "0.1-0.2"},
+              "memory_mb": {"type": "string", "example": "15-25"}
+            }
+          },
+          "research_paper": {
+            "type": "object",
+            "properties": {
+              "pages": {"type": "string", "example": "6-10"},
+              "time_seconds": {"type": "string", "example": "0.2-0.5"},
+              "memory_mb": {"type": "string", "example": "25-40"}
+            }
+          },
+          "technical_report": {
+            "type": "object",
+            "properties": {
+              "pages": {"type": "string", "example": "20-30"},
+              "time_seconds": {"type": "string", "example": "0.5-1.0"},
+              "memory_mb": {"type": "string", "example": "40-60"}
+            }
+          },
+          "thesis_chapter": {
+            "type": "object",
+            "properties": {
+              "pages": {"type": "string", "example": "50+"},
+              "time_seconds": {"type": "string", "example": "1.0-2.0"},
+              "memory_mb": {"type": "string", "example": "60-100"}
+            }
+          }
+        }
+      },
+      "success_rates": {
+        "type": "object",
+        "properties": {
+          "compilation_success_rate": {"type": "number", "example": 0.992},
+          "validation_accuracy": {"type": "number", "example": 0.987},
+          "error_recovery_rate": {"type": "number", "example": 0.87}
+        }
+      }
+    }
+  },
+  
+  "error_taxonomy": {
+    "type": "object",
+    "description": "Structured error categorization",
+    "properties": {
+      "categories": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "type": {"type": "string"},
+            "description": {"type": "string"},
+            "common_causes": {"type": "array", "items": {"type": "string"}},
+            "recovery_strategies": {"type": "array", "items": {"type": "string"}},
+            "examples": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    }
+  }
+}
