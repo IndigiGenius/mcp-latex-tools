@@ -9,9 +9,12 @@ from mcp.server.stdio import stdio_server
 from mcp.types import (
     CallToolRequest,
     CallToolResult,
+    CallToolRequestParams,
     ListToolsResult,
     Tool,
     TextContent,
+    ServerCapabilities,
+    ToolsCapability,
 )
 
 from mcp_latex_tools.tools.compile import compile_latex, CompilationError
@@ -21,18 +24,19 @@ from mcp_latex_tools.tools.cleanup import clean_latex, CleanupError
 
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Create MCP server instance
 server: Server = Server("mcp-latex-tools")
+logger.debug(f"Server created with name: {server.name}")
 
 
 @server.list_tools()
-async def list_tools() -> ListToolsResult:
+async def list_tools() -> list[Tool]:
     """List available LaTeX tools."""
-    return ListToolsResult(
-        tools=[
+    logger.debug("list_tools called")
+    return [
             Tool(
                 name="compile_latex",
                 description="Compile LaTeX files to PDF with comprehensive error handling",
@@ -138,33 +142,53 @@ async def list_tools() -> ListToolsResult:
                 },
             ),
         ]
-    )
 
 
 @server.call_tool()
-async def call_tool(request: CallToolRequest) -> CallToolResult:
+async def call_tool(tool_name: str, arguments: dict) -> list[TextContent]:
     """Handle tool calls."""
     try:
-        if request.params.name == "compile_latex":
-            return await handle_compile_latex(request)
-        elif request.params.name == "validate_latex":
-            return await handle_validate_latex(request)
-        elif request.params.name == "pdf_info":
-            return await handle_pdf_info(request)
-        elif request.params.name == "cleanup":
-            return await handle_cleanup(request)
+        logger.debug(f"call_tool called with name={tool_name}, arguments={arguments}")
+        
+        if tool_name == "compile_latex":
+            # Create a mock request object for backward compatibility
+            request = CallToolRequest(
+                method="tools/call",
+                params=CallToolRequestParams(name=tool_name, arguments=arguments)
+            )
+            result = await handle_compile_latex(request)
+            return result.content
+        elif tool_name == "validate_latex":
+            request = CallToolRequest(
+                method="tools/call",
+                params=CallToolRequestParams(name=tool_name, arguments=arguments)
+            )
+            result = await handle_validate_latex(request)
+            return result.content
+        elif tool_name == "pdf_info":
+            request = CallToolRequest(
+                method="tools/call",
+                params=CallToolRequestParams(name=tool_name, arguments=arguments)
+            )
+            result = await handle_pdf_info(request)
+            return result.content
+        elif tool_name == "cleanup":
+            request = CallToolRequest(
+                method="tools/call",
+                params=CallToolRequestParams(name=tool_name, arguments=arguments)
+            )
+            result = await handle_cleanup(request)
+            return result.content
         else:
-            raise ValueError(f"Unknown tool: {request.params.name}")
+            raise ValueError(f"Unknown tool: {tool_name}")
     except Exception as e:
-        logger.error(f"Error in tool call {request.params.name}: {e}")
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=f"Error: {str(e)}",
-                )
-            ]
-        )
+        logger.error(f"Error in tool call {tool_name}: {e}")
+        return [
+            TextContent(
+                type="text",
+                text=f"Error: {str(e)}",
+            )
+        ]
 
 
 async def handle_compile_latex(request: CallToolRequest) -> CallToolResult:
@@ -548,19 +572,14 @@ async def handle_cleanup(request: CallToolRequest) -> CallToolResult:
 async def main():
     """Run the MCP server."""
     logger.info("Starting MCP LaTeX Tools server")
+    logger.debug(f"Server handlers: {list(server.request_handlers.keys())}")
     
     async with stdio_server() as (read_stream, write_stream):
+        logger.debug("Got stdio streams, starting server.run()")
         await server.run(
             read_stream,
             write_stream,
-            InitializationOptions(
-                server_name="mcp-latex-tools",
-                server_version="0.1.0",
-                capabilities=server.get_capabilities(
-                    notification_options=None,
-                    experimental_capabilities={}
-                ),
-            ),
+            server.create_initialization_options(),
         )
 
 
