@@ -1,11 +1,14 @@
 """LaTeX auxiliary file cleanup tool for removing build artifacts."""
 
+import logging
 import shutil
 import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Set
+
+logger = logging.getLogger(__name__)
 
 
 class CleanupError(Exception):
@@ -32,55 +35,58 @@ class CleanupResult:
     cleanup_time_seconds: Optional[float]
 
 
-# Default auxiliary file extensions to clean
+# Default auxiliary file extensions to clean (single source of truth)
 DEFAULT_CLEANUP_EXTENSIONS = {
-    ".aux",      # LaTeX auxiliary files
-    ".log",      # LaTeX log files
-    ".out",      # Hyperref output files
-    ".fls",      # LaTeX file list
-    ".fdb_latexmk",  # Latexmk database
-    ".toc",      # Table of contents
-    ".lof",      # List of figures
-    ".lot",      # List of tables
-    ".bbl",      # Bibliography
-    ".blg",      # Bibliography log
-    ".nav",      # Beamer navigation
-    ".snm",      # Beamer slide notes
-    ".vrb",      # Beamer verbatim
-    ".idx",      # Index files
-    ".ilg",      # Index log
-    ".ind",      # Index
-    ".glo",      # Glossary
-    ".gls",      # Glossary sorted
-    ".glg",      # Glossary log
-    ".synctex.gz",  # SyncTeX files
-    ".figlist",  # Figure list
-    ".fpl",      # Figure page list
-    ".makefile", # Auto-generated makefiles
-    ".run.xml",  # Biber run files
+    ".aux",
+    ".log",
+    ".out",
+    ".fls",
+    ".fdb_latexmk",
+    ".toc",
+    ".lof",
+    ".lot",
+    ".bbl",
+    ".blg",
+    ".nav",
+    ".snm",
+    ".vrb",
+    ".idx",
+    ".ilg",
+    ".ind",
+    ".glo",
+    ".gls",
+    ".glg",
+    ".synctex.gz",
+    ".bcf",
+    ".brf",
+    ".run.xml",
+    ".figlist",
+    ".fpl",
+    ".makefile",
 }
 
-# File extensions that should be protected from cleanup
+# File extensions that should be protected from cleanup (single source of truth)
 PROTECTED_EXTENSIONS = {
-    ".tex",      # LaTeX source files
-    ".pdf",      # Output files
-    ".bib",      # Bibliography files
-    ".sty",      # Style files
-    ".cls",      # Class files
-    ".dtx",      # Documented LaTeX source
-    ".ins",      # Installation files
-    ".png",      # Images
-    ".jpg",      # Images
-    ".jpeg",     # Images
-    ".gif",      # Images
-    ".svg",      # Images
-    ".eps",      # Images
-    ".ps",       # PostScript
-    ".txt",      # Text files
-    ".md",       # Markdown files
-    ".py",       # Python files
-    ".sh",       # Shell scripts
-    ".bat",      # Batch files
+    ".tex",
+    ".pdf",
+    ".bib",
+    ".sty",
+    ".cls",
+    ".dtx",
+    ".ins",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".svg",
+    ".eps",
+    ".tikz",
+    ".ps",
+    ".txt",
+    ".md",
+    ".py",
+    ".sh",
+    ".bat",
 }
 
 
@@ -149,7 +155,9 @@ def clean_latex(
             result.backup_directory = str(backup_dir)
         except Exception as e:
             # If backup creation fails, continue without backup
-            result.error_message = f"Warning: Backup creation failed: {e}. Continuing without backup."
+            result.error_message = (
+                f"Warning: Backup creation failed: {e}. Continuing without backup."
+            )
             backup_dir = None
 
     try:
@@ -157,7 +165,7 @@ def clean_latex(
             # Clean auxiliary files for a specific .tex file
             result.tex_file_path = str(path_obj)
             result.directory_path = str(path_obj.parent)
-            
+
             if path_obj.suffix == ".tex":
                 # Clean auxiliary files with the same stem
                 _clean_tex_file_auxiliaries(
@@ -165,9 +173,7 @@ def clean_latex(
                 )
             else:
                 # Single file cleanup (if it matches cleanup extensions)
-                _clean_single_file(
-                    path_obj, cleanup_extensions, result, backup_dir
-                )
+                _clean_single_file(path_obj, cleanup_extensions, result, backup_dir)
         else:
             # Clean auxiliary files in directory
             result.directory_path = str(path_obj)
@@ -191,14 +197,14 @@ def clean_latex(
 def _create_backup_directory(path: Path) -> Path:
     """Create a backup directory for the cleanup operation."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
+
     if path.is_file():
         backup_name = f"backup_{path.stem}_{timestamp}"
         backup_dir = path.parent / backup_name
     else:
         backup_name = f"backup_{path.name}_{timestamp}"
         backup_dir = path.parent / backup_name
-    
+
     backup_dir.mkdir(exist_ok=True)
     return backup_dir
 
@@ -212,7 +218,7 @@ def _clean_tex_file_auxiliaries(
     """Clean auxiliary files for a specific .tex file."""
     tex_stem = tex_file.stem
     tex_dir = tex_file.parent
-    
+
     # Find all files with the same stem and auxiliary extensions
     for ext in cleanup_extensions:
         aux_file = tex_dir / f"{tex_stem}{ext}"
@@ -241,11 +247,9 @@ def _clean_directory_auxiliaries(
     """Clean auxiliary files in a directory."""
     # Use find_auxiliary_files to get list of files to clean
     auxiliary_files = find_auxiliary_files(
-        str(directory), 
-        extensions=list(cleanup_extensions), 
-        recursive=recursive
+        directory, extensions=cleanup_extensions, recursive=recursive
     )
-    
+
     # Process each auxiliary file
     for file_path in auxiliary_files:
         # file_path is already a Path object from find_auxiliary_files
@@ -259,7 +263,7 @@ def _process_file_for_cleanup(
 ) -> None:
     """Process a single file for cleanup (backup and/or remove)."""
     file_str = str(file_path)
-    
+
     if result.dry_run:
         # Dry run - just record what would be cleaned
         result.would_clean_files.append(file_str)
@@ -269,28 +273,16 @@ def _process_file_for_cleanup(
             if backup_dir:
                 backup_file = backup_dir / file_path.name
                 shutil.copy2(file_path, backup_file)
-            
+
             # Remove the file
             file_path.unlink()
-            
+
             # Record successful cleanup
             result.cleaned_files.append(file_str)
             result.cleaned_files_count += 1
-            
-        except Exception:
-            # If we can't remove a file, record it but don't fail the whole operation
-            # This allows partial cleanup to succeed
-            pass
 
-
-def get_default_cleanup_extensions() -> Set[str]:
-    """Get the default set of file extensions that will be cleaned."""
-    return DEFAULT_CLEANUP_EXTENSIONS.copy()
-
-
-def get_protected_extensions() -> Set[str]:
-    """Get the set of file extensions that are protected from cleanup."""
-    return PROTECTED_EXTENSIONS.copy()
+        except Exception as e:
+            logger.warning("Failed to clean %s: %s", file_path, e)
 
 
 def is_auxiliary_file(file_path: Path) -> bool:
@@ -302,7 +294,7 @@ def is_auxiliary_file(file_path: Path) -> bool:
 
 
 def find_auxiliary_files(
-    directory: Path,
+    directory: "str | Path",
     recursive: bool = False,
     extensions: Optional[Set[str]] = None,
 ) -> List[Path]:
@@ -319,26 +311,23 @@ def find_auxiliary_files(
     """
     if extensions is None:
         extensions = DEFAULT_CLEANUP_EXTENSIONS
-    
-    auxiliary_files = []
-    
-    # Convert string path to Path object if needed
+
+    auxiliary_files: List[Path] = []
+
     if isinstance(directory, str):
         directory = Path(directory)
-    
-    # Get pattern based on recursive flag
-    if recursive:
-        pattern = "**/*"
-    else:
-        pattern = "*"
-    
-    # Find all files matching cleanup extensions
-    for file_path in directory.glob(pattern):
-        if file_path.is_file():
-            if (
-                file_path.suffix in extensions
-                and file_path.suffix not in PROTECTED_EXTENSIONS
-            ):
-                auxiliary_files.append(file_path)
-    
+
+    pattern = "**/*" if recursive else "*"
+
+    try:
+        for file_path in directory.glob(pattern):
+            if file_path.is_file():
+                if (
+                    file_path.suffix in extensions
+                    and file_path.suffix not in PROTECTED_EXTENSIONS
+                ):
+                    auxiliary_files.append(file_path)
+    except (PermissionError, OSError):
+        pass
+
     return auxiliary_files
