@@ -18,7 +18,7 @@
 MCP LaTeX Tools is a production-ready Model Context Protocol server providing LaTeX compilation and PDF analysis tools with three key architectural pillars:
 
 1. **Concise Output**: 97.4% token reduction through intelligent log parsing
-2. **Comprehensive Tooling**: Four core tools (compile, validate, pdf_info, cleanup)
+2. **Comprehensive Tooling**: Five core tools (compile, validate, pdf_info, cleanup, detect_packages)
 3. **Extensible Design**: Modular architecture supporting future enhancements
 
 **Current Status**: Production-ready core tools with 100% test pass rate (172 tests), achieving sub-second performance and massive token reduction.
@@ -37,7 +37,8 @@ mcp-latex-tools/
 │   │   ├── compile.py         # LaTeX compilation (pdflatex/xelatex/lualatex/latexmk, multi-pass)
 │   │   ├── validate.py        # Syntax validation
 │   │   ├── pdf_info.py        # PDF metadata extraction
-│   │   └── cleanup.py         # Auxiliary file cleanup
+│   │   ├── cleanup.py         # Auxiliary file cleanup
+│   │   └── detect_packages.py # Package detection and installation check
 │   └── utils/
 │       └── log_parser.py      # Token-optimized log parsing
 ├── tests/                     # Test suite (mirrors src structure)
@@ -50,6 +51,7 @@ mcp-latex-tools/
 │   ├── test_cleanup_edge_cases.py
 │   ├── test_log_parser.py
 │   ├── test_mcp_resources_prompts.py
+│   ├── test_detect_packages.py
 │   ├── test_server_integration.py
 │   └── test_server_error_handling.py
 ├── docs/                      # Documentation
@@ -74,6 +76,7 @@ mcp-latex-tools/
 - **validate.py**: Syntax checking without compilation
 - **pdf_info.py**: PDF metadata extraction
 - **cleanup.py**: Auxiliary file management
+- **detect_packages.py**: Package detection via `\usepackage`/`\RequirePackage` parsing and `kpsewhich` installation checks
 
 #### Layer 3: Utilities (utils/)
 - **log_parser.py**: Intelligent log parsing for token reduction
@@ -96,6 +99,7 @@ async def list_tools() -> list[Tool]:
         Tool(name="validate_latex", ...),
         Tool(name="pdf_info", ...),
         Tool(name="cleanup", ...),
+        Tool(name="detect_packages", ...),
     ]
 
 @server.call_tool()
