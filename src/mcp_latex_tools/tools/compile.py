@@ -45,9 +45,6 @@ def compile_latex(
     if not tex_path:
         raise CompilationError("LaTeX file path cannot be empty")
 
-    if tex_path is None:
-        raise CompilationError("LaTeX file path cannot be None")
-
     tex_file = Path(tex_path)
     if not tex_file.exists():
         raise CompilationError(f"LaTeX file not found: {tex_path}")

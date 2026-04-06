@@ -68,7 +68,7 @@ def extract_pdf_info(
         raise PDFInfoError("File path cannot be empty")
 
     path = Path(file_path)
-    
+
     # Check file existence and get file size
     try:
         file_size = path.stat().st_size
@@ -154,18 +154,18 @@ def extract_pdf_info(
                     width = float(mediabox.width)
                     height = float(mediabox.height)
 
-                    page_dimensions.append({
-                        "width": width,
-                        "height": height,
-                        "unit": "pt"
-                    })
+                    page_dimensions.append(
+                        {"width": width, "height": height, "unit": "pt"}
+                    )
                 except Exception:
                     # If we can't get dimensions for a page, use default
-                    page_dimensions.append({
-                        "width": 612.0,  # Default letter size
-                        "height": 792.0,
-                        "unit": "pt"
-                    })
+                    page_dimensions.append(
+                        {
+                            "width": 612.0,  # Default letter size
+                            "height": 792.0,
+                            "unit": "pt",
+                        }
+                    )
 
             result.page_dimensions = page_dimensions
 
@@ -198,59 +198,25 @@ def extract_pdf_info(
 
 
 def _format_pdf_date(pdf_date: Optional[str]) -> Optional[str]:
-    """
-    Format PDF date string to ISO format.
-    
-    PDF dates are often in format: D:YYYYMMDDHHmmSSOHH'mm'
-    where O is the timezone offset indicator (+ or -)
-    """
+    """Format PDF date string (D:YYYYMMDDHHmmSSOHH'mm') to ISO format."""
     if not pdf_date:
         return None
-    
     try:
-        # Remove D: prefix if present
-        if pdf_date.startswith("D:"):
-            pdf_date = pdf_date[2:]
-        
-        # Extract basic date components (YYYYMMDDHHMMSS)
-        if len(pdf_date) >= 14:
-            year = pdf_date[0:4]
-            month = pdf_date[4:6]
-            day = pdf_date[6:8]
-            hour = pdf_date[8:10]
-            minute = pdf_date[10:12]
-            second = pdf_date[12:14]
-            
-            # Check for timezone information
-            timezone_str = ""
-            if len(pdf_date) > 14:
-                # Look for timezone offset (e.g., +05'30' or -08'00')
-                tz_part = pdf_date[14:]
-                if tz_part.startswith(('+', '-')):
-                    # Extract timezone
-                    tz_sign = tz_part[0]
-                    tz_hours = tz_part[1:3] if len(tz_part) > 2 else "00"
-                    # Look for minutes part after apostrophe
-                    if "'" in tz_part and len(tz_part) > tz_part.index("'") + 2:
-                        tz_mins = tz_part[tz_part.index("'") + 1:tz_part.index("'") + 3]
-                    else:
-                        tz_mins = "00"
-                    timezone_str = f"{tz_sign}{tz_hours}:{tz_mins}"
-                else:
-                    timezone_str = "Z"
-            else:
-                timezone_str = "Z"
-            
-            # Create ISO format date with timezone
-            return f"{year}-{month}-{day}T{hour}:{minute}:{second}{timezone_str}"
-        elif len(pdf_date) >= 8:
-            # Just date without time
-            year = pdf_date[0:4]
-            month = pdf_date[4:6]
-            day = pdf_date[6:8]
-            return f"{year}-{month}-{day}T00:00:00Z"
-        else:
-            return None
+        raw = pdf_date[2:] if pdf_date.startswith("D:") else pdf_date
+        if len(raw) >= 14:
+            base = f"{raw[0:4]}-{raw[4:6]}-{raw[6:8]}T{raw[8:10]}:{raw[10:12]}:{raw[12:14]}"
+            tz = raw[14:]
+            if tz and tz[0] in "+-":
+                tz_h = tz[1:3] if len(tz) > 2 else "00"
+                tz_m = (
+                    tz[tz.index("'") + 1 : tz.index("'") + 3]
+                    if "'" in tz and len(tz) > tz.index("'") + 2
+                    else "00"
+                )
+                return f"{base}{tz[0]}{tz_h}:{tz_m}"
+            return f"{base}Z"
+        elif len(raw) >= 8:
+            return f"{raw[0:4]}-{raw[4:6]}-{raw[6:8]}T00:00:00Z"
+        return None
     except Exception:
-        # If date parsing fails, return the original string
         return pdf_date
