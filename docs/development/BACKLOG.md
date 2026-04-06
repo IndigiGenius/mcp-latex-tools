@@ -2,7 +2,7 @@
 
 This document tracks features and improvements planned for future development.
 
-**Last Updated**: 2026-04-05
+**Last Updated**: 2026-04-06
 
 ---
 
@@ -179,6 +179,7 @@ tests/
 
 - [x] **Multi-Engine & Multi-Pass Compilation** (Apr 2026): 26Q2-ENH-01 — pdflatex/xelatex/lualatex/latexmk, auto passes, bibtex/biber support
 - [x] **LaTeX Package Detection** (Apr 2026): 26Q2-TOOL-01 — parse \usepackage/\RequirePackage, kpsewhich checks, tlmgr install suggestions
+- [x] **Pydantic Migration Part 1** (Apr 2026): 26Q2-REFAC-01 — LaTeXError, LogSummary, ValidationResult migrated from dataclasses to Pydantic BaseModel
 
 ---
 
