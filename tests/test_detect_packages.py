@@ -1,5 +1,6 @@
 """Tests for LaTeX package detection tool."""
 
+import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -243,6 +244,49 @@ Hello
         assert result.success is True
         assert result.packages == ["amsmath", "etoolbox"]
 
+    def test_usepackage_star_variant(self):
+        """Test detection of \\usepackage* (starred variant)."""
+        result = self._detect_parse_only(
+            r"""
+\documentclass{article}
+\usepackage*{amsmath}
+\begin{document}
+Hello
+\end{document}
+"""
+        )
+        assert result.success is True
+        assert result.packages == ["amsmath"]
+
+    def test_invalid_package_names_filtered(self):
+        """Test that invalid package names are filtered out."""
+        result = self._detect_parse_only(
+            r"""
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{../../etc/passwd}
+\usepackage{evil;rm -rf /}
+\begin{document}
+Hello
+\end{document}
+"""
+        )
+        assert result.success is True
+        assert result.packages == ["amsmath"]
+
+    def test_empty_file(self):
+        """Test empty .tex file returns no packages."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".tex", delete=False) as f:
+            f.write("")
+            tex_path = f.name
+
+        try:
+            result = detect_packages(tex_path, check_installed=False)
+            assert result.success is True
+            assert result.packages == []
+        finally:
+            Path(tex_path).unlink()
+
     def test_check_installed_false_skips_checks(self):
         """Test that check_installed=False leaves installed/missing empty."""
         result = self._detect_parse_only(
@@ -429,6 +473,34 @@ Hello
             assert "amsmath" in result.installed
             assert "nonexistentxyz" in result.missing
             assert "tlmgr install nonexistentxyz" in result.install_commands
+        finally:
+            Path(tex_path).unlink()
+
+    def test_kpsewhich_timeout_treated_as_missing(self):
+        """Test that kpsewhich timeout is handled gracefully."""
+        tex_path = self._write_tex(
+            r"""
+\documentclass{article}
+\usepackage{slowpkg}
+\begin{document}
+Hello
+\end{document}
+"""
+        )
+        try:
+            with patch(
+                "mcp_latex_tools.tools.detect_packages.subprocess.run",
+                side_effect=subprocess.TimeoutExpired(cmd="kpsewhich", timeout=5),
+            ):
+                with patch(
+                    "mcp_latex_tools.tools.detect_packages.shutil.which",
+                    return_value="/usr/bin/kpsewhich",
+                ):
+                    result = detect_packages(tex_path, check_installed=True)
+
+            assert result.success is True
+            assert "slowpkg" in result.missing
+            assert "tlmgr install slowpkg" in result.install_commands
         finally:
             Path(tex_path).unlink()
 

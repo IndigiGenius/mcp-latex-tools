@@ -32,22 +32,25 @@ class PackageDetectionResult:
 # Regex: match \usepackage or \RequirePackage, with optional [...] options, capture {packages}
 # Only match lines where % does not precede the command
 _PACKAGE_RE = re.compile(
-    r"^[^%\n]*\\(?:usepackage|RequirePackage)\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}",
+    r"^[^%\n]*\\(?:usepackage|RequirePackage)\*?\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}",
     re.MULTILINE,
 )
+
+# Valid LaTeX package names: alphanumeric, hyphens, underscores
+_VALID_PKG_NAME = re.compile(r"^[a-zA-Z0-9_-]+$")
 
 
 def _parse_packages(content: str) -> list[str]:
     """Parse package names from LaTeX file content.
 
-    Returns a deduplicated, sorted list of package names.
+    Returns a deduplicated, sorted list of valid package names.
     """
     packages: set[str] = set()
     for match in _PACKAGE_RE.finditer(content):
         raw = match.group(1)
         for pkg in raw.split(","):
             name = pkg.strip()
-            if name:
+            if name and _VALID_PKG_NAME.match(name):
                 packages.add(name)
     return sorted(packages)
 
@@ -67,15 +70,19 @@ def _check_installed(packages: list[str]) -> tuple[list[str], list[str], list[st
     install_commands: list[str] = []
 
     for pkg in packages:
-        result = subprocess.run(
-            ["kpsewhich", f"{pkg}.sty"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            installed.append(pkg)
-        else:
+        try:
+            result = subprocess.run(
+                ["kpsewhich", f"{pkg}.sty"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                installed.append(pkg)
+            else:
+                missing.append(pkg)
+                install_commands.append(f"tlmgr install {pkg}")
+        except subprocess.TimeoutExpired:
             missing.append(pkg)
             install_commands.append(f"tlmgr install {pkg}")
 

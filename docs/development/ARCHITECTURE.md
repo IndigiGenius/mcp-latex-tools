@@ -21,7 +21,7 @@ MCP LaTeX Tools is a production-ready Model Context Protocol server providing La
 2. **Comprehensive Tooling**: Five core tools (compile, validate, pdf_info, cleanup, detect_packages)
 3. **Extensible Design**: Modular architecture supporting future enhancements
 
-**Current Status**: Production-ready core tools with 100% test pass rate (172 tests), achieving sub-second performance and massive token reduction.
+**Current Status**: Production-ready core tools with 100% test pass rate, achieving sub-second performance and massive token reduction.
 
 ---
 

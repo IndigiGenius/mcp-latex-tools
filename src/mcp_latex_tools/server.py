@@ -258,7 +258,7 @@ async def read_resource(uri: AnyUrl) -> str:
 
 ## Error Recovery
 If compilation fails, run `validate_latex` to identify syntax errors.
-If validation passes but compilation fails, check for missing packages or increase timeout.
+If validation passes but compilation fails, run `detect_packages` to check for missing packages, or increase timeout.
 """
 
     raise ValueError(f"Unknown resource: {uri_str}")
