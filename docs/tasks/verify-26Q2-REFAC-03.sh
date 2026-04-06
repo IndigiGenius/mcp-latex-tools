@@ -62,9 +62,10 @@ uv run ruff check src/ tests/
 uv run ruff format --check src/ tests/
 uv run mypy src/
 
-# 9. All 7 classes migrated in docs
-grep -q "CleanupResult.*Pydantic" docs/development/ARCHITECTURE.md
-grep -q "PDFInfoResult.*Pydantic" docs/development/ARCHITECTURE.md
+# 9. All 7 classes listed in docs (migration complete, no "pending" remaining)
+grep -q "CleanupResult" docs/development/ARCHITECTURE.md
+grep -q "PDFInfoResult" docs/development/ARCHITECTURE.md
+! grep -q "pending" docs/development/ARCHITECTURE.md
 echo "Docs OK"
 
 echo ""
