@@ -30,6 +30,7 @@ from mcp_latex_tools.tools.detect_packages import (
     detect_packages,
     PackageDetectionError,
 )
+from mcp_latex_tools.config import load_config
 from mcp_latex_tools.utils.log_parser import get_error_summary
 
 logging.basicConfig(
@@ -39,6 +40,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 server: Server = Server("mcp-latex-tools")
+_config = load_config()
 
 
 @server.list_tools()
@@ -452,8 +454,8 @@ async def _handle_compile(args: dict) -> list[TextContent]:
             "Error: tex_path is required. Pass the path to the .tex file."
         )
 
-    engine = args.get("engine", "pdflatex")
-    passes = args.get("passes", 1)
+    engine = args.get("engine", _config.compilation.engine)
+    passes = args.get("passes", _config.compilation.passes)
 
     try:
         loop = asyncio.get_running_loop()
@@ -462,7 +464,7 @@ async def _handle_compile(args: dict) -> list[TextContent]:
             lambda: compile_latex(
                 tex_path,
                 output_dir=args.get("output_dir"),
-                timeout=args.get("timeout", 30),
+                timeout=args.get("timeout", _config.compilation.timeout),
                 engine=engine,
                 passes=passes,
             ),
@@ -504,8 +506,8 @@ async def _handle_validate(args: dict) -> list[TextContent]:
             None,
             validate_latex,
             file_path,
-            args.get("quick", False),
-            args.get("strict", False),
+            args.get("quick", _config.validation.quick),
+            args.get("strict", _config.validation.strict),
         )
 
         if result.is_valid:
@@ -538,7 +540,7 @@ async def _handle_pdf_info(args: dict) -> list[TextContent]:
             "Error: file_path is required. Pass the path to the PDF file."
         )
 
-    include_text = args.get("include_text", False)
+    include_text = args.get("include_text", _config.pdf_info.include_text)
     try:
         loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
@@ -601,10 +603,10 @@ async def _handle_cleanup(args: dict) -> list[TextContent]:
             None,
             clean_latex,
             path,
-            args.get("extensions"),
-            args.get("dry_run", False),
-            args.get("recursive", False),
-            args.get("create_backup", False),
+            args.get("extensions", _config.cleanup.extensions),
+            args.get("dry_run", _config.cleanup.dry_run),
+            args.get("recursive", _config.cleanup.recursive),
+            args.get("create_backup", _config.cleanup.create_backup),
         )
 
         if result.success:
@@ -653,7 +655,9 @@ async def _handle_detect_packages(args: dict) -> list[TextContent]:
             "Error: file_path is required. Pass the path to the .tex file."
         )
 
-    check_installed = args.get("check_installed", True)
+    check_installed = args.get(
+        "check_installed", _config.detect_packages.check_installed
+    )
 
     try:
         loop = asyncio.get_running_loop()
