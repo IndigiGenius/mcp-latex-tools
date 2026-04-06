@@ -43,7 +43,7 @@ async def list_tools() -> list[Tool]:
     return [
         Tool(
             name="compile_latex",
-            description="Compile .tex to PDF via pdflatex. Creates .pdf/.aux/.log. Returns path, timing, errors.",
+            description="Compile .tex to PDF via pdflatex (requires pdflatex). Single-pass. Creates .pdf/.aux/.log. Returns path, timing, errors.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -126,7 +126,7 @@ async def list_tools() -> list[Tool]:
                     "extensions": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Custom extensions to clean (default: .aux, .log, .out, etc.)",
+                        "description": 'Extensions with leading dot (e.g., [".aux", ".log"]). Default: .aux, .log, .out, etc.',
                     },
                     "dry_run": {
                         "type": "boolean",
@@ -183,7 +183,8 @@ async def list_resources() -> list[Resource]:
 @server.read_resource()
 async def read_resource(uri: str) -> str:
     """Read resource content."""
-    if uri == "latex://config/cleanup-extensions":
+    uri_str = str(uri)
+    if uri_str == "latex://config/cleanup-extensions":
         return json.dumps(
             {
                 "extensions": sorted(DEFAULT_CLEANUP_EXTENSIONS),
@@ -193,7 +194,7 @@ async def read_resource(uri: str) -> str:
             indent=2,
         )
 
-    elif uri == "latex://config/protected-extensions":
+    elif uri_str == "latex://config/protected-extensions":
         return json.dumps(
             {
                 "extensions": sorted(PROTECTED_EXTENSIONS),
@@ -203,7 +204,7 @@ async def read_resource(uri: str) -> str:
             indent=2,
         )
 
-    elif uri == "latex://help/workflow":
+    elif uri_str == "latex://help/workflow":
         return """# LaTeX Compilation Workflow
 
 1. **Validate**: `validate_latex` — catch syntax errors fast
@@ -216,7 +217,7 @@ If compilation fails, run `validate_latex` to identify syntax errors.
 If validation passes but compilation fails, check for missing packages or increase timeout.
 """
 
-    raise ValueError(f"Unknown resource: {uri}")
+    raise ValueError(f"Unknown resource: {uri_str}")
 
 
 # =============================================================================
@@ -390,13 +391,23 @@ async def call_tool(tool_name: str, arguments: dict) -> list[TextContent]:  # ty
         return _text_result(f"Error: {e}")
 
 
+def _get_path_arg(args: dict, *keys: str) -> str | None:
+    """Get path argument, accepting common aliases."""
+    for key in keys:
+        if val := args.get(key):
+            return val
+    return None
+
+
 async def _handle_compile(args: dict) -> list[TextContent]:
-    tex_path = args.get("tex_path")
+    tex_path = _get_path_arg(args, "tex_path", "file_path", "path")
     if not tex_path:
-        return _text_result("Error: tex_path is required")
+        return _text_result(
+            "Error: tex_path is required. Pass the path to the .tex file."
+        )
 
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
             None,
             compile_latex,
@@ -424,12 +435,14 @@ async def _handle_compile(args: dict) -> list[TextContent]:
 
 
 async def _handle_validate(args: dict) -> list[TextContent]:
-    file_path = args.get("file_path")
+    file_path = _get_path_arg(args, "file_path", "tex_path", "path")
     if not file_path:
-        return _text_result("Error: file_path is required")
+        return _text_result(
+            "Error: file_path is required. Pass the path to the .tex file."
+        )
 
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
             None,
             validate_latex,
@@ -462,13 +475,15 @@ async def _handle_validate(args: dict) -> list[TextContent]:
 
 
 async def _handle_pdf_info(args: dict) -> list[TextContent]:
-    file_path = args.get("file_path")
+    file_path = _get_path_arg(args, "file_path", "path", "tex_path")
     if not file_path:
-        return _text_result("Error: file_path is required")
+        return _text_result(
+            "Error: file_path is required. Pass the path to the PDF file."
+        )
 
     include_text = args.get("include_text", False)
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
             None, extract_pdf_info, file_path, include_text, args.get("password")
         )
@@ -517,12 +532,14 @@ async def _handle_pdf_info(args: dict) -> list[TextContent]:
 
 
 async def _handle_cleanup(args: dict) -> list[TextContent]:
-    path = args.get("path")
+    path = _get_path_arg(args, "path", "file_path", "tex_path")
     if not path:
-        return _text_result("Error: path is required")
+        return _text_result(
+            "Error: path is required. Pass the path to a .tex file or directory."
+        )
 
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
             None,
             clean_latex,

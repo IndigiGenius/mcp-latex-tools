@@ -3,6 +3,7 @@
 import json
 import pytest
 
+from mcp.types import AnyUrl
 from mcp_latex_tools.server import (
     list_resources,
     read_resource,
@@ -92,6 +93,28 @@ class TestMCPResources:
         assert "compile_latex" in content
         assert "pdf_info" in content
         assert "cleanup" in content
+
+    @pytest.mark.asyncio
+    async def test_read_resource_with_anyurl_cleanup_extensions(self):
+        """Test that read_resource works with AnyUrl objects (MCP dispatch path)."""
+        content = await read_resource(AnyUrl("latex://config/cleanup-extensions"))
+        data = json.loads(content)
+        assert "extensions" in data
+        assert data["count"] == len(CLEANUP_EXTENSIONS)
+
+    @pytest.mark.asyncio
+    async def test_read_resource_with_anyurl_protected_extensions(self):
+        """Test that read_resource works with AnyUrl objects for protected extensions."""
+        content = await read_resource(AnyUrl("latex://config/protected-extensions"))
+        data = json.loads(content)
+        assert "extensions" in data
+        assert data["count"] == len(PROTECTED_EXTENSIONS)
+
+    @pytest.mark.asyncio
+    async def test_read_resource_with_anyurl_workflow(self):
+        """Test that read_resource works with AnyUrl objects for workflow guide."""
+        content = await read_resource(AnyUrl("latex://help/workflow"))
+        assert "# LaTeX Compilation Workflow" in content
 
     @pytest.mark.asyncio
     async def test_read_resource_unknown_uri_raises_error(self):
