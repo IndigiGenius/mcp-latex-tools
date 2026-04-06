@@ -1,12 +1,12 @@
 """LaTeX log parsing utilities for extracting concise error information."""
 
 import re
-from dataclasses import dataclass
 from typing import List, Optional
 
+from pydantic import BaseModel
 
-@dataclass
-class LaTeXError:
+
+class LaTeXError(BaseModel):
     """Represents a LaTeX error extracted from logs."""
 
     line_number: Optional[int]
@@ -15,8 +15,7 @@ class LaTeXError:
     context: Optional[str] = None
 
 
-@dataclass
-class LogSummary:
+class LogSummary(BaseModel):
     """Concise summary of LaTeX compilation log."""
 
     errors: List[LaTeXError]
