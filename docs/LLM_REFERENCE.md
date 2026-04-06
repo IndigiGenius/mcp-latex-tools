@@ -70,6 +70,33 @@ Missing packages?
 | "Permission denied" | Check file/directory permissions |
 | Timeout | Increase `timeout` parameter (default: 30s) |
 
+## Configuration File
+
+Place a `.mcp-latex-tools.toml` in your project root to override defaults. All fields are optional:
+
+```toml
+[compilation]
+engine = "xelatex"    # default: "pdflatex"
+timeout = 60          # default: 30
+passes = "auto"       # default: 1
+
+[validation]
+strict = true         # default: false
+max_errors = 5        # default: 10
+
+[cleanup]
+dry_run = true        # default: false
+extensions = [".aux", ".log", ".out"]  # default: all 26 extensions
+
+[pdf_info]
+include_text = true   # default: false
+
+[detect_packages]
+check_installed = false  # default: true
+```
+
+MCP tool call arguments always override config file values.
+
 ## Parameter Defaults
 
 ### compile_latex
