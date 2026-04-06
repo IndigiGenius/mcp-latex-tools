@@ -186,7 +186,7 @@ E = mc^2
     @pytest.mark.asyncio
     async def test_pdf_info_tool_success(self):
         """Test successful PDF info extraction through MCP tool."""
-        pdf_path = Path(__file__).parent / "fixtures" / "simple.pdf"
+        pdf_path = Path(__file__).parent.parent / "fixtures" / "simple.pdf"
 
         result = await call_tool(
             "pdf_info", {"file_path": str(pdf_path), "include_text": False}
@@ -200,7 +200,7 @@ E = mc^2
     @pytest.mark.asyncio
     async def test_pdf_info_tool_with_text_extraction(self):
         """Test PDF info extraction with text content."""
-        pdf_path = Path(__file__).parent / "fixtures" / "simple.pdf"
+        pdf_path = Path(__file__).parent.parent / "fixtures" / "simple.pdf"
 
         result = await call_tool(
             "pdf_info", {"file_path": str(pdf_path), "include_text": True}

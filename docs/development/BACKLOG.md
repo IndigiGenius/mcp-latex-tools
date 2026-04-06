@@ -106,24 +106,9 @@ LaTeX template management for common document types.
 
 ## Technical Debt
 
-### Test Organization
-**Problem**: Inconsistent test organization across directories.
+### ~~Test Organization~~ ✅ COMPLETE (Apr 2026)
 
-**Proposed Structure**:
-```
-tests/
-├── tools/
-│   ├── test_compile.py
-│   ├── test_validate.py
-│   └── ...
-├── utils/
-│   └── test_*.py
-├── integration/
-│   └── test_end_to_end.py
-└── fixtures/
-```
-
-**Effort**: Low (1-2 hours)
+Reorganized all 11 test files into `tests/tools/`, `tests/utils/`, `tests/integration/` subdirectories mirroring source structure (26Q2-DEBT-01).
 
 ---
 
@@ -170,6 +155,7 @@ tests/
 - [x] **Pydantic Migration Part 1** (Apr 2026): 26Q2-REFAC-01 — LaTeXError, LogSummary, ValidationResult migrated from dataclasses to Pydantic BaseModel
 - [x] **Pydantic Migration Part 2** (Apr 2026): 26Q2-REFAC-02 — CompilationResult, PackageDetectionResult migrated; pydantic>=2.0 added as explicit dependency
 - [x] **Pydantic Migration Part 3** (Apr 2026): 26Q2-REFAC-03 — CleanupResult, PDFInfoResult migrated; all 7 result classes now Pydantic BaseModel
+- [x] **Test Organization** (Apr 2026): 26Q2-DEBT-01 — Tests reorganized into tools/, utils/, integration/ subdirectories
 
 ---
 

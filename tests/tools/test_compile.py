@@ -20,7 +20,7 @@ class TestCompileLatex:
     def test_compile_latex_with_valid_file_returns_success(self):
         """Test that compiling a valid LaTeX file returns success."""
         # Arrange
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
 
         # Act
         result = compile_latex(str(fixture_path))
@@ -37,7 +37,7 @@ class TestCompileLatex:
     def test_compile_latex_with_invalid_file_returns_error(self):
         """Test that compiling an invalid LaTeX file returns error."""
         # Arrange
-        fixture_path = Path(__file__).parent / "fixtures" / "invalid.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "invalid.tex"
 
         # Act
         result = compile_latex(str(fixture_path))
@@ -82,7 +82,7 @@ class TestCompileLatex:
         # Arrange
         with tempfile.TemporaryDirectory() as temp_dir:
             # Copy simple.tex to temp directory
-            source_path = Path(__file__).parent / "fixtures" / "simple.tex"
+            source_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
             temp_tex_path = Path(temp_dir) / "test.tex"
             temp_tex_path.write_text(source_path.read_text())
 
@@ -98,7 +98,7 @@ class TestCompileLatex:
     def test_compile_latex_with_custom_output_directory(self):
         """Test compilation with custom output directory."""
         # Arrange
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
 
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "output"
@@ -114,7 +114,7 @@ class TestCompileLatex:
     def test_compile_latex_with_timeout_parameter(self):
         """Test compilation with timeout parameter."""
         # Arrange
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
 
         # Act
         result = compile_latex(str(fixture_path), timeout=30)
@@ -127,7 +127,7 @@ class TestCompileLatex:
     def test_compile_latex_handles_permission_errors(self):
         """Test that compilation handles permission errors gracefully."""
         # Arrange
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
 
         # Mock subprocess to raise PermissionError
         with patch("subprocess.run") as mock_run:
@@ -143,7 +143,7 @@ class TestCompileLatex:
     def test_compile_latex_handles_process_timeout(self):
         """Test that compilation handles process timeout gracefully."""
         # Arrange
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
 
         # Mock subprocess to raise TimeoutExpired
         with patch("subprocess.run") as mock_run:
@@ -227,7 +227,7 @@ class TestCompileEngine:
 
     def test_default_engine_is_pdflatex(self):
         """Test that default engine is pdflatex."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_tex = Path(temp_dir) / "test.tex"
             temp_tex.write_text(fixture_path.read_text())
@@ -237,7 +237,7 @@ class TestCompileEngine:
 
     def test_engine_pdflatex_explicit(self):
         """Test explicit pdflatex engine."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_tex = Path(temp_dir) / "test.tex"
             temp_tex.write_text(fixture_path.read_text())
@@ -249,7 +249,7 @@ class TestCompileEngine:
 
     def test_engine_xelatex(self):
         """Test xelatex engine compiles successfully."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_tex = Path(temp_dir) / "test.tex"
             temp_tex.write_text(fixture_path.read_text())
@@ -261,7 +261,7 @@ class TestCompileEngine:
 
     def test_engine_lualatex(self):
         """Test lualatex engine compiles successfully."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_tex = Path(temp_dir) / "test.tex"
             temp_tex.write_text(fixture_path.read_text())
@@ -273,7 +273,7 @@ class TestCompileEngine:
 
     def test_engine_latexmk(self):
         """Test latexmk engine compiles successfully."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_tex = Path(temp_dir) / "test.tex"
             temp_tex.write_text(fixture_path.read_text())
@@ -285,7 +285,7 @@ class TestCompileEngine:
 
     def test_invalid_engine_raises_error(self):
         """Test that an invalid engine raises CompilationError."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with pytest.raises(CompilationError) as exc_info:
             compile_latex(str(fixture_path), engine="notanengine")
         assert "engine" in str(exc_info.value).lower()
@@ -299,7 +299,7 @@ class TestCompileEngine:
 
     def test_engine_builds_correct_command(self):
         """Test that each engine uses the right binary via subprocess."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
 
         for engine in ["pdflatex", "xelatex", "lualatex"]:
             with patch("subprocess.run") as mock_run:
@@ -317,7 +317,7 @@ class TestCompilePasses:
 
     def test_default_passes_is_one(self):
         """Test that default passes is 1."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_tex = Path(temp_dir) / "test.tex"
             temp_tex.write_text(fixture_path.read_text())
@@ -327,7 +327,7 @@ class TestCompilePasses:
 
     def test_explicit_single_pass(self):
         """Test passes=1 does a single compilation."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_tex = Path(temp_dir) / "test.tex"
             temp_tex.write_text(fixture_path.read_text())
@@ -337,7 +337,7 @@ class TestCompilePasses:
 
     def test_two_passes(self):
         """Test passes=2 runs the engine twice."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_tex = Path(temp_dir) / "test.tex"
             temp_tex.write_text(fixture_path.read_text())
@@ -347,7 +347,7 @@ class TestCompilePasses:
 
     def test_three_passes(self):
         """Test passes=3 runs the engine three times."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_tex = Path(temp_dir) / "test.tex"
             temp_tex.write_text(fixture_path.read_text())
@@ -357,7 +357,7 @@ class TestCompilePasses:
 
     def test_auto_passes_no_rerun_needed(self):
         """Test passes='auto' with a simple doc does a single pass."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_tex = Path(temp_dir) / "test.tex"
             temp_tex.write_text(fixture_path.read_text())
@@ -383,7 +383,7 @@ Hello world.
 
     def test_auto_passes_max_three(self):
         """Test passes='auto' never exceeds 3 passes."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_tex = Path(temp_dir) / "test.tex"
             temp_tex.write_text(fixture_path.read_text())
@@ -393,14 +393,14 @@ Hello world.
 
     def test_invalid_passes_raises_error(self):
         """Test that invalid passes value raises CompilationError."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with pytest.raises(CompilationError) as exc_info:
             compile_latex(str(fixture_path), passes=0)
         assert "passes" in str(exc_info.value).lower()
 
     def test_latexmk_ignores_passes(self):
         """Test that latexmk handles passes automatically regardless of param."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_tex = Path(temp_dir) / "test.tex"
             temp_tex.write_text(fixture_path.read_text())
@@ -470,7 +470,7 @@ Citation: \cite{knuth1984}.
 
     def test_no_bibliography_no_bibtex(self):
         """Test that bibtex/biber is NOT run when no bibliography detected."""
-        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_tex = Path(temp_dir) / "test.tex"
             temp_tex.write_text(fixture_path.read_text())
