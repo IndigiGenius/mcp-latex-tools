@@ -77,17 +77,6 @@ Better handling of LaTeX projects with multiple files.
 
 ---
 
-### LaTeX Package Detection
-**Priority**: LOW | **Effort**: 3-5 days
-
-Detect and report missing LaTeX packages.
-
-**Features**:
-- Parse `\usepackage{}` commands
-- Check if packages are installed
-- Suggest tlmgr installation commands
-- Integration with TeX Live
-
 ---
 
 ### Template Support
@@ -189,6 +178,7 @@ tests/
 ### Q2 2026
 
 - [x] **Multi-Engine & Multi-Pass Compilation** (Apr 2026): 26Q2-ENH-01 — pdflatex/xelatex/lualatex/latexmk, auto passes, bibtex/biber support
+- [x] **LaTeX Package Detection** (Apr 2026): 26Q2-TOOL-01 — parse \usepackage/\RequirePackage, kpsewhich checks, tlmgr install suggestions
 
 ---
 
