@@ -86,6 +86,8 @@ class TestCompilationResponseFormatting:
             output_path: Optional[str] = None
             log_content: Optional[str] = None
             compilation_time_seconds: Optional[float] = 1.5
+            engine: Optional[str] = "pdflatex"
+            passes_run: Optional[int] = 1
 
         with patch("mcp_latex_tools.server.compile_latex", return_value=MockResult()):
             result = await call_tool("compile_latex", {"tex_path": "test.tex"})

@@ -43,7 +43,7 @@ async def list_tools() -> list[Tool]:
     return [
         Tool(
             name="compile_latex",
-            description="Compile .tex to PDF via pdflatex (requires pdflatex). Single-pass. Creates .pdf/.aux/.log. Returns path, timing, errors.",
+            description="Compile .tex to PDF. Supports pdflatex/xelatex/lualatex/latexmk engines and multi-pass compilation with automatic bibliography (bibtex/biber) support.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -61,6 +61,27 @@ async def list_tools() -> list[Tool]:
                         "default": 30,
                         "minimum": 5,
                         "maximum": 300,
+                    },
+                    "engine": {
+                        "type": "string",
+                        "description": "LaTeX engine to use",
+                        "enum": ["pdflatex", "xelatex", "lualatex", "latexmk"],
+                        "default": "pdflatex",
+                    },
+                    "passes": {
+                        "description": "Number of compilation passes (1-3) or 'auto' to detect from log. latexmk handles passes automatically.",
+                        "oneOf": [
+                            {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 3,
+                            },
+                            {
+                                "type": "string",
+                                "enum": ["auto"],
+                            },
+                        ],
+                        "default": 1,
                     },
                 },
                 "required": ["tex_path"],
@@ -406,24 +427,35 @@ async def _handle_compile(args: dict) -> list[TextContent]:
             "Error: tex_path is required. Pass the path to the .tex file."
         )
 
+    engine = args.get("engine", "pdflatex")
+    passes = args.get("passes", 1)
+
     try:
         loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
             None,
-            compile_latex,
-            tex_path,
-            args.get("output_dir"),
-            args.get("timeout", 30),
+            lambda: compile_latex(
+                tex_path,
+                output_dir=args.get("output_dir"),
+                timeout=args.get("timeout", 30),
+                engine=engine,
+                passes=passes,
+            ),
         )
 
         if result.success:
             text = f"Compilation successful\nOutput: {result.output_path}"
+            text += f"\nEngine: {result.engine}"
+            if result.passes_run and result.passes_run > 1:
+                text += f"\nPasses: {result.passes_run}"
             if result.compilation_time_seconds:
                 text += f"\nCompilation time: {result.compilation_time_seconds:.2f}s"
         else:
             text = "Compilation failed"
             if result.error_message:
                 text += f"\nError: {result.error_message}"
+            if result.engine:
+                text += f"\nEngine: {result.engine}"
             if result.compilation_time_seconds:
                 text += f"\nCompilation time: {result.compilation_time_seconds:.2f}s"
             if result.log_content:

@@ -6,7 +6,7 @@ Quick reference for LLM agents using MCP LaTeX Tools.
 
 | Tool | Purpose | Key Params | Side Effects |
 |------|---------|------------|--------------|
-| `compile_latex` | .tex to PDF | `tex_path` (required), `timeout`, `output_dir` | Creates .pdf, .aux, .log |
+| `compile_latex` | .tex to PDF | `tex_path` (required), `engine`, `passes`, `timeout`, `output_dir` | Creates .pdf, .aux, .log |
 | `validate_latex` | Syntax check | `file_path` (required), `quick`, `strict` | None (read-only) |
 | `pdf_info` | PDF metadata | `file_path` (required), `include_text` | None (read-only) |
 | `cleanup` | Remove aux files | `path` (required), `dry_run`, `recursive` | Deletes files |
@@ -37,6 +37,15 @@ Quick reference for LLM agents using MCP LaTeX Tools.
 Need PDF from .tex?
   -> compile_latex
 
+Unicode fonts or OpenType?
+  -> compile_latex with engine="xelatex" or engine="lualatex"
+
+Has bibliography or cross-references?
+  -> compile_latex with passes="auto" (auto-detects bibtex/biber)
+
+Complex document (bibliography + cross-refs + TOC)?
+  -> compile_latex with engine="latexmk" (handles everything automatically)
+
 Syntax errors?
   -> validate_latex first (faster than compilation)
 
@@ -60,7 +69,15 @@ Remove .aux/.log files?
 ## Parameter Defaults
 
 ### compile_latex
-- `timeout`: 30 seconds (increase for large documents)
+- `engine`: `"pdflatex"` (default). Options: `"pdflatex"`, `"xelatex"`, `"lualatex"`, `"latexmk"`
+  - Use `xelatex` or `lualatex` for Unicode/OpenType font support
+  - Use `latexmk` for automatic multi-pass handling (recommended for complex documents)
+- `passes`: `1` (default). Options: `1`, `2`, `3`, or `"auto"`
+  - `"auto"` detects rerun needs from the log (max 3 passes)
+  - Automatically runs `bibtex` when `\bibliography{}` is detected
+  - Automatically runs `biber` when `\addbibresource{}` is detected
+  - `latexmk` engine handles passes automatically regardless of this setting
+- `timeout`: 30 seconds (increase for large documents or multi-pass)
 - `output_dir`: Same directory as input file
 
 ### validate_latex

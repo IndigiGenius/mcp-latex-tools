@@ -2,13 +2,15 @@
 
 import pytest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+import subprocess
 import tempfile
 
 from mcp_latex_tools.tools.compile import (
     compile_latex,
     CompilationResult,
     CompilationError,
+    SUPPORTED_ENGINES,
 )
 
 
@@ -218,3 +220,296 @@ class TestCompilationError:
             # Assert
             assert str(error) == "Compilation failed"
             assert error.__cause__ == original_error
+
+
+class TestCompileEngine:
+    """Test cases for engine parameter."""
+
+    def test_default_engine_is_pdflatex(self):
+        """Test that default engine is pdflatex."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "test.tex"
+            temp_tex.write_text(fixture_path.read_text())
+            result = compile_latex(str(temp_tex))
+            assert result.success is True
+            assert result.engine == "pdflatex"
+
+    def test_engine_pdflatex_explicit(self):
+        """Test explicit pdflatex engine."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "test.tex"
+            temp_tex.write_text(fixture_path.read_text())
+            result = compile_latex(str(temp_tex), engine="pdflatex")
+            assert result.success is True
+            assert result.engine == "pdflatex"
+            assert result.output_path is not None
+            assert result.output_path.endswith(".pdf")
+
+    def test_engine_xelatex(self):
+        """Test xelatex engine compiles successfully."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "test.tex"
+            temp_tex.write_text(fixture_path.read_text())
+            result = compile_latex(str(temp_tex), engine="xelatex")
+            assert result.success is True
+            assert result.engine == "xelatex"
+            assert result.output_path is not None
+            assert Path(result.output_path).exists()
+
+    def test_engine_lualatex(self):
+        """Test lualatex engine compiles successfully."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "test.tex"
+            temp_tex.write_text(fixture_path.read_text())
+            result = compile_latex(str(temp_tex), engine="lualatex")
+            assert result.success is True
+            assert result.engine == "lualatex"
+            assert result.output_path is not None
+            assert Path(result.output_path).exists()
+
+    def test_engine_latexmk(self):
+        """Test latexmk engine compiles successfully."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "test.tex"
+            temp_tex.write_text(fixture_path.read_text())
+            result = compile_latex(str(temp_tex), engine="latexmk")
+            assert result.success is True
+            assert result.engine == "latexmk"
+            assert result.output_path is not None
+            assert Path(result.output_path).exists()
+
+    def test_invalid_engine_raises_error(self):
+        """Test that an invalid engine raises CompilationError."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with pytest.raises(CompilationError) as exc_info:
+            compile_latex(str(fixture_path), engine="notanengine")
+        assert "engine" in str(exc_info.value).lower()
+
+    def test_supported_engines_constant(self):
+        """Test that SUPPORTED_ENGINES lists all valid engines."""
+        assert "pdflatex" in SUPPORTED_ENGINES
+        assert "xelatex" in SUPPORTED_ENGINES
+        assert "lualatex" in SUPPORTED_ENGINES
+        assert "latexmk" in SUPPORTED_ENGINES
+
+    def test_engine_builds_correct_command(self):
+        """Test that each engine uses the right binary via subprocess."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+
+        for engine in ["pdflatex", "xelatex", "lualatex"]:
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = MagicMock(returncode=1, stderr="")
+                try:
+                    compile_latex(str(fixture_path), engine=engine)
+                except Exception:
+                    pass
+                cmd = mock_run.call_args_list[0][0][0]
+                assert cmd[0] == engine
+
+
+class TestCompilePasses:
+    """Test cases for passes parameter."""
+
+    def test_default_passes_is_one(self):
+        """Test that default passes is 1."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "test.tex"
+            temp_tex.write_text(fixture_path.read_text())
+            result = compile_latex(str(temp_tex))
+            assert result.success is True
+            assert result.passes_run == 1
+
+    def test_explicit_single_pass(self):
+        """Test passes=1 does a single compilation."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "test.tex"
+            temp_tex.write_text(fixture_path.read_text())
+            result = compile_latex(str(temp_tex), passes=1)
+            assert result.success is True
+            assert result.passes_run == 1
+
+    def test_two_passes(self):
+        """Test passes=2 runs the engine twice."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "test.tex"
+            temp_tex.write_text(fixture_path.read_text())
+            result = compile_latex(str(temp_tex), passes=2)
+            assert result.success is True
+            assert result.passes_run == 2
+
+    def test_three_passes(self):
+        """Test passes=3 runs the engine three times."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "test.tex"
+            temp_tex.write_text(fixture_path.read_text())
+            result = compile_latex(str(temp_tex), passes=3)
+            assert result.success is True
+            assert result.passes_run == 3
+
+    def test_auto_passes_no_rerun_needed(self):
+        """Test passes='auto' with a simple doc does a single pass."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "test.tex"
+            temp_tex.write_text(fixture_path.read_text())
+            result = compile_latex(str(temp_tex), passes="auto")
+            assert result.success is True
+            assert result.passes_run == 1
+
+    def test_auto_passes_detects_rerun(self):
+        """Test passes='auto' reruns when log suggests it."""
+        tex_content = r"""\documentclass{article}
+\begin{document}
+See Section~\ref{sec:intro} on page~\pageref{sec:intro}.
+\section{Introduction}\label{sec:intro}
+Hello world.
+\end{document}
+"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "crossref.tex"
+            temp_tex.write_text(tex_content)
+            result = compile_latex(str(temp_tex), passes="auto")
+            assert result.success is True
+            assert result.passes_run >= 2
+
+    def test_auto_passes_max_three(self):
+        """Test passes='auto' never exceeds 3 passes."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "test.tex"
+            temp_tex.write_text(fixture_path.read_text())
+            result = compile_latex(str(temp_tex), passes="auto")
+            assert result.passes_run is not None
+            assert result.passes_run <= 3
+
+    def test_invalid_passes_raises_error(self):
+        """Test that invalid passes value raises CompilationError."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with pytest.raises(CompilationError) as exc_info:
+            compile_latex(str(fixture_path), passes=0)
+        assert "passes" in str(exc_info.value).lower()
+
+    def test_latexmk_ignores_passes(self):
+        """Test that latexmk handles passes automatically regardless of param."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "test.tex"
+            temp_tex.write_text(fixture_path.read_text())
+            result = compile_latex(str(temp_tex), engine="latexmk", passes=3)
+            assert result.success is True
+            assert result.engine == "latexmk"
+            assert result.passes_run is not None
+
+
+class TestCompileBibliography:
+    """Test cases for bibliography detection and bibtex/biber support."""
+
+    def test_bibtex_run_with_bibliography(self):
+        """Test that bibtex is run when \\bibliography{} is detected."""
+        tex_content = r"""\documentclass{article}
+\begin{document}
+Citation: \cite{knuth1984}.
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}
+"""
+        bib_content = r"""@book{knuth1984,
+  author = {Donald E. Knuth},
+  title = {The TeXbook},
+  publisher = {Addison-Wesley},
+  year = {1984},
+}
+"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "bibtest.tex"
+            temp_tex.write_text(tex_content)
+            temp_bib = Path(temp_dir) / "refs.bib"
+            temp_bib.write_text(bib_content)
+
+            result = compile_latex(str(temp_tex), passes="auto")
+            assert result.success is True
+            assert result.passes_run is not None
+            assert result.passes_run >= 2
+
+    def test_biber_run_with_addbibresource(self):
+        """Test that biber is run when \\addbibresource{} is detected."""
+        tex_content = r"""\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+Citation: \cite{knuth1984}.
+\printbibliography
+\end{document}
+"""
+        bib_content = r"""@book{knuth1984,
+  author = {Donald E. Knuth},
+  title = {The TeXbook},
+  publisher = {Addison-Wesley},
+  year = {1984},
+}
+"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "bibertest.tex"
+            temp_tex.write_text(tex_content)
+            temp_bib = Path(temp_dir) / "refs.bib"
+            temp_bib.write_text(bib_content)
+
+            result = compile_latex(str(temp_tex), passes="auto")
+            assert result.success is True
+            assert result.passes_run is not None
+            assert result.passes_run >= 2
+
+    def test_no_bibliography_no_bibtex(self):
+        """Test that bibtex/biber is NOT run when no bibliography detected."""
+        fixture_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_tex = Path(temp_dir) / "test.tex"
+            temp_tex.write_text(fixture_path.read_text())
+
+            with patch("subprocess.run", wraps=subprocess.run) as mock_run:
+                result = compile_latex(str(temp_tex), passes="auto")
+                for c in mock_run.call_args_list:
+                    cmd = c[0][0]
+                    assert cmd[0] not in ("bibtex", "biber"), (
+                        f"bibtex/biber should not run without bibliography, got: {cmd}"
+                    )
+            assert result.success is True
+
+
+class TestCompilationResultNewFields:
+    """Test cases for new fields on CompilationResult."""
+
+    def test_compilation_result_has_engine_field(self):
+        """Test CompilationResult includes engine field."""
+        result = CompilationResult(
+            success=True,
+            output_path="/path/to/output.pdf",
+            engine="xelatex",
+            passes_run=2,
+        )
+        assert result.engine == "xelatex"
+
+    def test_compilation_result_has_passes_run_field(self):
+        """Test CompilationResult includes passes_run field."""
+        result = CompilationResult(
+            success=True,
+            output_path="/path/to/output.pdf",
+            engine="pdflatex",
+            passes_run=3,
+        )
+        assert result.passes_run == 3
+
+    def test_compilation_result_defaults(self):
+        """Test CompilationResult new fields default to None."""
+        result = CompilationResult(success=False)
+        assert result.engine is None
+        assert result.passes_run is None
