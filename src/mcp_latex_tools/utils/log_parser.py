@@ -62,15 +62,13 @@ def parse_latex_log(log_content: str, max_errors: int = 10) -> LogSummary:
         if "warning" in line.lower():
             warnings_count += 1
 
-        # Count overfull/underfull hbox as warnings
-        if "overfull" in line.lower() or "underfull" in line.lower():
+        # Count overfull/underfull hbox as warnings (elif to avoid double-counting)
+        elif "overfull" in line.lower() or "underfull" in line.lower():
             warnings_count += 1
 
         # Check for undefined references
-        if (
-            "undefined references" in line.lower()
-            or "reference" in line.lower()
-            and "undefined" in line.lower()
+        if "undefined references" in line.lower() or (
+            "reference" in line.lower() and "undefined" in line.lower()
         ):
             has_undefined_references = True
 
