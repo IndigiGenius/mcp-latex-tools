@@ -141,37 +141,25 @@ Each tool follows a consistent schema pattern:
 
 ### Pattern 1: Result Models
 
-Each tool returns a structured result model. Models are being migrated from `dataclasses` to Pydantic `BaseModel` for automatic validation, JSON schema generation, and richer serialization.
+Each tool returns a structured Pydantic `BaseModel` result with automatic validation, JSON schema generation, and rich serialization.
 
-**Migration Status**:
-
-| Model | Module | Status |
-|-------|--------|--------|
-| `LaTeXError` | `utils/log_parser.py` | Pydantic BaseModel |
-| `LogSummary` | `utils/log_parser.py` | Pydantic BaseModel |
-| `ValidationResult` | `tools/validate.py` | Pydantic BaseModel |
-| `CompilationResult` | `tools/compile.py` | Pydantic BaseModel |
-| `PackageDetectionResult` | `tools/detect_packages.py` | Pydantic BaseModel |
-| `CleanupResult` | `tools/cleanup.py` | dataclass (pending) |
-| `PDFInfoResult` | `tools/pdf_info.py` | dataclass (pending) |
+| Model | Module |
+|-------|--------|
+| `LaTeXError` | `utils/log_parser.py` |
+| `LogSummary` | `utils/log_parser.py` |
+| `ValidationResult` | `tools/validate.py` |
+| `CompilationResult` | `tools/compile.py` |
+| `PackageDetectionResult` | `tools/detect_packages.py` |
+| `CleanupResult` | `tools/cleanup.py` |
+| `PDFInfoResult` | `tools/pdf_info.py` |
 
 ```python
-# Already migrated (Parts 1-2)
 class CompilationResult(BaseModel):
     success: bool
     output_path: Optional[str] = None
     error_message: Optional[str] = None
     log_content: Optional[str] = None
     compilation_time_seconds: Optional[float] = None
-
-# Pending migration (Part 3)
-@dataclass
-class CleanupResult:
-    success: bool
-    error_message: Optional[str]
-    cleaned_files_count: int
-    cleaned_files: List[str]
-    ...
 ```
 
 **Benefits**:
@@ -179,8 +167,8 @@ class CleanupResult:
 - Clear success/failure states
 - Comprehensive error information
 - Performance metrics included
-- Automatic input validation (Pydantic models)
-- JSON schema generation for MCP (Pydantic models)
+- Automatic input validation
+- JSON schema generation for MCP
 
 ### Pattern 2: Graceful Error Handling
 
@@ -284,6 +272,6 @@ See [BACKLOG.md](BACKLOG.md) for the full feature backlog and prioritization.
 ---
 
 **Document Version History**:
-- 2026-04-06: Updated Pydantic migration status — Parts 1 & 2 complete (26Q2-REFAC-01, 26Q2-REFAC-02)
+- 2026-04-06: Completed Pydantic migration — all 7 result classes (26Q2-REFAC-01/02/03)
 - 2026-04-05: Major rewrite — updated for post-cleanup architecture
 - 2025-10-22: Initial architecture document
