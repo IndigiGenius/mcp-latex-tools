@@ -8,21 +8,9 @@ This document tracks features and improvements planned for future development.
 
 ## Near-Term Candidates
 
-### Pydantic Migration
-**Priority**: HIGH | **Effort**: 2-3 weeks
+### ~~Pydantic Migration~~ ✅ COMPLETE (Apr 2026)
 
-Migrate all result classes from dataclasses to Pydantic models.
-
-**Benefits**:
-- Automatic input validation
-- JSON schema generation for MCP
-- Enhanced error messages
-- Type coercion
-
-**Scope**:
-- `CompilationResult`, `ValidationResult`, `PdfInfoResult`, `CleanupResult`
-- `LintResult`, `FormatResult` (new tools)
-- Schema documentation generation
+Migrated all 7 result classes from dataclasses to Pydantic BaseModel in 3 PRs (26Q2-REFAC-01/02/03). Remaining scope for future work: schema documentation generation.
 
 ---
 
@@ -181,6 +169,7 @@ tests/
 - [x] **LaTeX Package Detection** (Apr 2026): 26Q2-TOOL-01 — parse \usepackage/\RequirePackage, kpsewhich checks, tlmgr install suggestions
 - [x] **Pydantic Migration Part 1** (Apr 2026): 26Q2-REFAC-01 — LaTeXError, LogSummary, ValidationResult migrated from dataclasses to Pydantic BaseModel
 - [x] **Pydantic Migration Part 2** (Apr 2026): 26Q2-REFAC-02 — CompilationResult, PackageDetectionResult migrated; pydantic>=2.0 added as explicit dependency
+- [x] **Pydantic Migration Part 3** (Apr 2026): 26Q2-REFAC-03 — CleanupResult, PDFInfoResult migrated; all 7 result classes now Pydantic BaseModel
 
 ---
 
