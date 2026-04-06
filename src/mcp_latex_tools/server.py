@@ -181,7 +181,7 @@ async def list_resources() -> list[Resource]:
 
 
 @server.read_resource()
-async def read_resource(uri: str) -> str:
+async def read_resource(uri: AnyUrl) -> str:
     """Read resource content."""
     uri_str = str(uri)
     if uri_str == "latex://config/cleanup-extensions":
