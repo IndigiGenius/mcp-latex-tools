@@ -1,581 +1,598 @@
 """MCP server for LaTeX compilation and PDF tools."""
 
 import asyncio
+import json
 import logging
 
 from mcp.server import Server
-from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 from mcp.types import (
-    CallToolRequest,
-    CallToolResult,
-    CallToolRequestParams,
-    ListToolsResult,
     Tool,
     TextContent,
-    ServerCapabilities,
-    ToolsCapability,
+    Resource,
+    Prompt,
+    PromptArgument,
+    PromptMessage,
+    GetPromptResult,
+    AnyUrl,
 )
 
 from mcp_latex_tools.tools.compile import compile_latex, CompilationError
 from mcp_latex_tools.tools.validate import validate_latex, ValidationError
 from mcp_latex_tools.tools.pdf_info import extract_pdf_info, PDFInfoError
-from mcp_latex_tools.tools.cleanup import clean_latex, CleanupError
+from mcp_latex_tools.tools.cleanup import (
+    clean_latex,
+    CleanupError,
+    DEFAULT_CLEANUP_EXTENSIONS,
+    PROTECTED_EXTENSIONS,
+)
+from mcp_latex_tools.utils.log_parser import get_error_summary
 
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.WARNING,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
 
-# Create MCP server instance
 server: Server = Server("mcp-latex-tools")
-logger.debug(f"Server created with name: {server.name}")
 
 
 @server.list_tools()
 async def list_tools() -> list[Tool]:
     """List available LaTeX tools."""
-    logger.debug("list_tools called")
     return [
-            Tool(
-                name="compile_latex",
-                description="Compile LaTeX files to PDF with comprehensive error handling",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "tex_path": {
-                            "type": "string",
-                            "description": "Path to the .tex file to compile",
-                        },
-                        "output_dir": {
-                            "type": "string",
-                            "description": "Directory for output (defaults to same as input)",
-                        },
-                        "timeout": {
-                            "type": "integer",
-                            "description": "Maximum seconds to wait for compilation",
-                            "default": 30,
-                        },
+        Tool(
+            name="compile_latex",
+            description="Compile .tex to PDF via pdflatex (requires pdflatex). Single-pass. Creates .pdf/.aux/.log. Returns path, timing, errors.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "tex_path": {
+                        "type": "string",
+                        "description": "Path to the .tex file to compile",
                     },
-                    "required": ["tex_path"],
-                },
-            ),
-            Tool(
-                name="validate_latex",
-                description="Validate LaTeX syntax without full compilation",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "file_path": {
-                            "type": "string",
-                            "description": "Path to the .tex file to validate",
-                        },
-                        "quick": {
-                            "type": "boolean",
-                            "description": "Perform quick syntax check only (mutually exclusive with strict)",
-                            "default": False,
-                        },
-                        "strict": {
-                            "type": "boolean",
-                            "description": "Perform thorough validation with style checks (mutually exclusive with quick)",
-                            "default": False,
-                        },
+                    "output_dir": {
+                        "type": "string",
+                        "description": "Directory for output files (default: same as input)",
                     },
-                    "required": ["file_path"],
-                },
-            ),
-            Tool(
-                name="pdf_info",
-                description="Extract PDF metadata and information without compilation",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "file_path": {
-                            "type": "string",
-                            "description": "Path to the PDF file to analyze",
-                        },
-                        "include_text": {
-                            "type": "boolean",
-                            "description": "Extract text content from PDF pages",
-                            "default": False,
-                        },
-                        "password": {
-                            "type": "string",
-                            "description": "Password for encrypted PDFs (optional)",
-                        },
+                    "timeout": {
+                        "type": "integer",
+                        "description": "Max compilation time in seconds",
+                        "default": 30,
+                        "minimum": 5,
+                        "maximum": 300,
                     },
-                    "required": ["file_path"],
                 },
-            ),
-            Tool(
-                name="cleanup",
-                description="Clean LaTeX auxiliary files (.aux, .log, .out, etc.) from directories or individual files",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "Path to .tex file or directory to clean",
-                        },
-                        "extensions": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "List of file extensions to clean (defaults to common auxiliary files)",
-                        },
-                        "dry_run": {
-                            "type": "boolean",
-                            "description": "Show what would be cleaned without removing files",
-                            "default": False,
-                        },
-                        "recursive": {
-                            "type": "boolean",
-                            "description": "Clean subdirectories recursively",
-                            "default": False,
-                        },
-                        "create_backup": {
-                            "type": "boolean",
-                            "description": "Create backup of files before deletion",
-                            "default": False,
-                        },
+                "required": ["tex_path"],
+            },
+        ),
+        Tool(
+            name="validate_latex",
+            description="Check LaTeX syntax without compiling. Modes: quick, default, strict. Returns errors/warnings.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to the .tex file to validate",
                     },
-                    "required": ["path"],
+                    "quick": {
+                        "type": "boolean",
+                        "description": "Quick mode: structure only",
+                        "default": False,
+                    },
+                    "strict": {
+                        "type": "boolean",
+                        "description": "Strict mode: include style checks",
+                        "default": False,
+                    },
                 },
-            ),
-        ]
+                "required": ["file_path"],
+            },
+        ),
+        Tool(
+            name="pdf_info",
+            description="Extract PDF metadata: pages, dimensions, title, author, dates. Optional text extraction.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to the PDF file to analyze",
+                    },
+                    "include_text": {
+                        "type": "boolean",
+                        "description": "Extract text content from pages",
+                        "default": False,
+                    },
+                    "password": {
+                        "type": "string",
+                        "description": "Password for encrypted PDFs",
+                    },
+                },
+                "required": ["file_path"],
+            },
+        ),
+        Tool(
+            name="cleanup",
+            description="Remove LaTeX auxiliary files (.aux, .log, etc.). Supports dry_run, recursive, backup. Never deletes .tex/.pdf/.bib.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Path to .tex file or directory to clean",
+                    },
+                    "extensions": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": 'Extensions with leading dot (e.g., [".aux", ".log"]). Default: .aux, .log, .out, etc.',
+                    },
+                    "dry_run": {
+                        "type": "boolean",
+                        "description": "Preview what would be deleted without deleting",
+                        "default": False,
+                    },
+                    "recursive": {
+                        "type": "boolean",
+                        "description": "Clean subdirectories recursively",
+                        "default": False,
+                    },
+                    "create_backup": {
+                        "type": "boolean",
+                        "description": "Create backup before deleting",
+                        "default": False,
+                    },
+                },
+                "required": ["path"],
+            },
+        ),
+    ]
+
+
+# =============================================================================
+# MCP Resources
+# =============================================================================
+
+
+@server.list_resources()
+async def list_resources() -> list[Resource]:
+    """List available LaTeX resources."""
+    return [
+        Resource(
+            uri=AnyUrl("latex://config/cleanup-extensions"),
+            name="Cleanup Extensions",
+            description="File extensions removed by the cleanup tool",
+            mimeType="application/json",
+        ),
+        Resource(
+            uri=AnyUrl("latex://config/protected-extensions"),
+            name="Protected Extensions",
+            description="File extensions protected from cleanup (never deleted)",
+            mimeType="application/json",
+        ),
+        Resource(
+            uri=AnyUrl("latex://help/workflow"),
+            name="Workflow Guide",
+            description="Recommended workflow for LaTeX document compilation",
+            mimeType="text/markdown",
+        ),
+    ]
+
+
+@server.read_resource()
+async def read_resource(uri: AnyUrl) -> str:
+    """Read resource content."""
+    uri_str = str(uri)
+    if uri_str == "latex://config/cleanup-extensions":
+        return json.dumps(
+            {
+                "extensions": sorted(DEFAULT_CLEANUP_EXTENSIONS),
+                "description": "File extensions removed by the cleanup tool",
+                "count": len(DEFAULT_CLEANUP_EXTENSIONS),
+            },
+            indent=2,
+        )
+
+    elif uri_str == "latex://config/protected-extensions":
+        return json.dumps(
+            {
+                "extensions": sorted(PROTECTED_EXTENSIONS),
+                "description": "File extensions protected from cleanup (never deleted)",
+                "count": len(PROTECTED_EXTENSIONS),
+            },
+            indent=2,
+        )
+
+    elif uri_str == "latex://help/workflow":
+        return """# LaTeX Compilation Workflow
+
+1. **Validate**: `validate_latex` — catch syntax errors fast
+2. **Compile**: `compile_latex` — generate PDF
+3. **Verify**: `pdf_info` — check page count and metadata
+4. **Cleanup**: `cleanup` with `dry_run=true` first, then without
+
+## Error Recovery
+If compilation fails, run `validate_latex` to identify syntax errors.
+If validation passes but compilation fails, check for missing packages or increase timeout.
+"""
+
+    raise ValueError(f"Unknown resource: {uri_str}")
+
+
+# =============================================================================
+# MCP Prompts
+# =============================================================================
+
+
+@server.list_prompts()
+async def list_prompts() -> list[Prompt]:
+    """List available LaTeX workflow prompts."""
+    return [
+        Prompt(
+            name="compile-and-verify",
+            description="Complete workflow: validate, compile, verify PDF, and clean up",
+            arguments=[
+                PromptArgument(
+                    name="tex_path",
+                    description="Path to the .tex file to compile",
+                    required=True,
+                ),
+                PromptArgument(
+                    name="cleanup",
+                    description="Whether to clean auxiliary files after (true/false)",
+                    required=False,
+                ),
+            ],
+        ),
+        Prompt(
+            name="diagnose-compilation-error",
+            description="Diagnose why a LaTeX document fails to compile",
+            arguments=[
+                PromptArgument(
+                    name="tex_path",
+                    description="Path to the .tex file that failed to compile",
+                    required=True,
+                ),
+            ],
+        ),
+        Prompt(
+            name="prepare-fresh-build",
+            description="Clean all auxiliary files and recompile from scratch",
+            arguments=[
+                PromptArgument(
+                    name="tex_path",
+                    description="Path to the .tex file to rebuild",
+                    required=True,
+                ),
+            ],
+        ),
+    ]
+
+
+@server.get_prompt()
+async def get_prompt(name: str, arguments: dict | None = None) -> GetPromptResult:
+    """Get prompt messages for a specific workflow."""
+    args = arguments or {}
+
+    if name == "compile-and-verify":
+        tex_path = args.get("tex_path", "<tex_path>")
+        do_cleanup = str(args.get("cleanup", "true")).lower() == "true"
+        cleanup_step = (
+            "\n4. **CLEANUP**: Run `cleanup` on the .tex file path to remove auxiliary files."
+            if do_cleanup
+            else "\n4. **SKIP CLEANUP**: User requested no cleanup."
+        )
+        return GetPromptResult(
+            description=f"Complete compilation workflow for {tex_path}",
+            messages=[
+                PromptMessage(
+                    role="user",
+                    content=TextContent(
+                        type="text",
+                        text=f"""Execute a complete LaTeX compilation workflow for: {tex_path}
+
+Follow these steps in order:
+
+1. **VALIDATE**: Run `validate_latex` on "{tex_path}" to check for syntax errors.
+   - If errors found, report them and stop.
+   - If only warnings, continue but note them.
+
+2. **COMPILE**: Run `compile_latex` on "{tex_path}".
+   - If compilation fails, report the error summary.
+   - If successful, proceed to verification.
+
+3. **VERIFY**: Run `pdf_info` on the generated PDF.
+   - Report page count and file size.
+   - Confirm the PDF was created successfully.
+{cleanup_step}
+
+Report results at each step. Summarize the final outcome.""",
+                    ),
+                ),
+            ],
+        )
+
+    elif name == "diagnose-compilation-error":
+        tex_path = args.get("tex_path", "<tex_path>")
+        return GetPromptResult(
+            description=f"Diagnose compilation errors for {tex_path}",
+            messages=[
+                PromptMessage(
+                    role="user",
+                    content=TextContent(
+                        type="text",
+                        text=f"""Diagnose compilation issues for: {tex_path}
+
+Follow this diagnostic procedure:
+
+1. **VALIDATE (Quick)**: Run `validate_latex` with `quick=true`.
+2. **VALIDATE (Full)**: If quick passes, run `validate_latex` with default settings.
+3. **VALIDATE (Strict)**: If full passes, run `validate_latex` with `strict=true`.
+4. **ATTEMPT COMPILATION**: If validation passes, try `compile_latex` with `timeout=60`.
+5. **DIAGNOSIS**: Based on all results, provide root cause, line numbers, and suggested fixes.""",
+                    ),
+                ),
+            ],
+        )
+
+    elif name == "prepare-fresh-build":
+        tex_path = args.get("tex_path", "<tex_path>")
+        return GetPromptResult(
+            description=f"Fresh build workflow for {tex_path}",
+            messages=[
+                PromptMessage(
+                    role="user",
+                    content=TextContent(
+                        type="text",
+                        text=f"""Perform a fresh build for: {tex_path}
+
+Steps:
+
+1. **PREVIEW CLEANUP**: Run `cleanup` with `dry_run=true` to see what would be removed.
+2. **CLEAN**: Run `cleanup` with `create_backup=true` to safely remove auxiliary files.
+3. **VALIDATE**: Run `validate_latex` to ensure the source file is ready.
+4. **COMPILE**: Run `compile_latex` to rebuild from scratch.
+5. **VERIFY**: Run `pdf_info` on the new PDF.""",
+                    ),
+                ),
+            ],
+        )
+
+    raise ValueError(f"Unknown prompt: {name}")
+
+
+# =============================================================================
+# Tool Call Handler
+# =============================================================================
+
+
+def _text_result(text: str) -> list[TextContent]:
+    """Return a single TextContent list."""
+    return [TextContent(type="text", text=text)]
 
 
 @server.call_tool()
-async def call_tool(tool_name: str, arguments: dict) -> list[TextContent]:
+async def call_tool(tool_name: str, arguments: dict) -> list[TextContent]:  # type: ignore[override]
     """Handle tool calls."""
     try:
-        logger.debug(f"call_tool called with name={tool_name}, arguments={arguments}")
-        
         if tool_name == "compile_latex":
-            # Create a mock request object for backward compatibility
-            request = CallToolRequest(
-                method="tools/call",
-                params=CallToolRequestParams(name=tool_name, arguments=arguments)
-            )
-            result = await handle_compile_latex(request)
-            return result.content
+            return await _handle_compile(arguments)
         elif tool_name == "validate_latex":
-            request = CallToolRequest(
-                method="tools/call",
-                params=CallToolRequestParams(name=tool_name, arguments=arguments)
-            )
-            result = await handle_validate_latex(request)
-            return result.content
+            return await _handle_validate(arguments)
         elif tool_name == "pdf_info":
-            request = CallToolRequest(
-                method="tools/call",
-                params=CallToolRequestParams(name=tool_name, arguments=arguments)
-            )
-            result = await handle_pdf_info(request)
-            return result.content
+            return await _handle_pdf_info(arguments)
         elif tool_name == "cleanup":
-            request = CallToolRequest(
-                method="tools/call",
-                params=CallToolRequestParams(name=tool_name, arguments=arguments)
-            )
-            result = await handle_cleanup(request)
-            return result.content
+            return await _handle_cleanup(arguments)
         else:
             raise ValueError(f"Unknown tool: {tool_name}")
     except Exception as e:
-        logger.error(f"Error in tool call {tool_name}: {e}")
-        return [
-            TextContent(
-                type="text",
-                text=f"Error: {str(e)}",
-            )
-        ]
+        logger.error("Error in tool call %s: %s", tool_name, e)
+        return _text_result(f"Error: {e}")
 
 
-async def handle_compile_latex(request: CallToolRequest) -> CallToolResult:
-    """Handle LaTeX compilation requests."""
-    args = request.params.arguments or {}
-    
-    # Extract arguments
-    tex_path = args.get("tex_path")
-    output_dir = args.get("output_dir")
-    timeout = args.get("timeout", 30)
-    
+def _get_path_arg(args: dict, *keys: str) -> str | None:
+    """Get path argument, accepting common aliases."""
+    for key in keys:
+        if val := args.get(key):
+            return val
+    return None
+
+
+async def _handle_compile(args: dict) -> list[TextContent]:
+    tex_path = _get_path_arg(args, "tex_path", "file_path", "path")
     if not tex_path:
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text="Error: tex_path is required",
-                )
-            ]
+        return _text_result(
+            "Error: tex_path is required. Pass the path to the .tex file."
         )
-    
+
     try:
-        # Run compilation in executor to avoid blocking
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
             None,
             compile_latex,
             tex_path,
-            output_dir,
-            timeout,
+            args.get("output_dir"),
+            args.get("timeout", 30),
         )
-        
-        # Format response
+
         if result.success:
-            response_text = "✓ LaTeX compilation successful!\n"
-            response_text += f"Output: {result.output_path}\n"
+            text = f"Compilation successful\nOutput: {result.output_path}"
             if result.compilation_time_seconds:
-                response_text += f"Compilation time: {result.compilation_time_seconds:.2f}s\n"
+                text += f"\nCompilation time: {result.compilation_time_seconds:.2f}s"
         else:
-            response_text = "✗ LaTeX compilation failed\n"
+            text = "Compilation failed"
             if result.error_message:
-                response_text += f"Error: {result.error_message}\n"
+                text += f"\nError: {result.error_message}"
             if result.compilation_time_seconds:
-                response_text += f"Compilation time: {result.compilation_time_seconds:.2f}s\n"
-        
-        # Include log content if available
-        if result.log_content:
-            response_text += f"\nLog content:\n{result.log_content}"
-        
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=response_text,
-                )
-            ]
-        )
-        
+                text += f"\nCompilation time: {result.compilation_time_seconds:.2f}s"
+            if result.log_content:
+                text += f"\n{get_error_summary(result.log_content)}"
+        return _text_result(text)
+
     except CompilationError as e:
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=f"Compilation error: {str(e)}",
-                )
-            ]
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error in compile_latex: {e}")
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=f"Unexpected error: {str(e)}",
-                )
-            ]
-        )
+        return _text_result(f"Compilation error: {e}")
 
 
-async def handle_validate_latex(request: CallToolRequest) -> CallToolResult:
-    """Handle LaTeX validation requests."""
-    args = request.params.arguments or {}
-    
-    # Extract arguments
-    file_path = args.get("file_path")
-    quick = args.get("quick", False)
-    strict = args.get("strict", False)
-    
+async def _handle_validate(args: dict) -> list[TextContent]:
+    file_path = _get_path_arg(args, "file_path", "tex_path", "path")
     if not file_path:
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text="Error: file_path is required",
-                )
-            ]
+        return _text_result(
+            "Error: file_path is required. Pass the path to the .tex file."
         )
-    
+
     try:
-        # Run validation in executor to avoid blocking
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
             None,
             validate_latex,
             file_path,
-            quick,
-            strict,
+            args.get("quick", False),
+            args.get("strict", False),
         )
-        
-        # Format response
+
         if result.is_valid:
-            response_text = "✓ Valid LaTeX syntax\n"
-            response_text += "No errors found\n"
+            text = "Valid LaTeX syntax\nNo errors found"
             if result.warnings:
-                response_text += f"Warnings ({len(result.warnings)}):\n"
-                for warning in result.warnings:
-                    response_text += f"  • {warning}\n"
+                text += f"\nWarnings ({len(result.warnings)}):"
+                for w in result.warnings:
+                    text += f"\n  - {w}"
         else:
-            response_text = "✗ Invalid LaTeX syntax\n"
-            response_text += f"Errors found ({len(result.errors)}):\n"
-            for error in result.errors:
-                response_text += f"  • {error}\n"
+            text = f"Invalid LaTeX syntax\nErrors found ({len(result.errors)}):"
+            for e in result.errors:
+                text += f"\n  - {e}"
             if result.warnings:
-                response_text += f"Warnings ({len(result.warnings)}):\n"
-                for warning in result.warnings:
-                    response_text += f"  • {warning}\n"
-        
-        # Include validation time
+                text += f"\nWarnings ({len(result.warnings)}):"
+                for w in result.warnings:
+                    text += f"\n  - {w}"
+
         if result.validation_time_seconds:
-            response_text += f"Validation time: {result.validation_time_seconds:.3f}s\n"
-        
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=response_text,
-                )
-            ]
-        )
-        
+            text += f"\nValidation time: {result.validation_time_seconds:.3f}s"
+        return _text_result(text)
+
     except ValidationError as e:
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=f"Validation error: {str(e)}",
-                )
-            ]
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error in validate_latex: {e}")
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=f"Unexpected error: {str(e)}",
-                )
-            ]
-        )
+        return _text_result(f"Validation error: {e}")
 
 
-async def handle_pdf_info(request: CallToolRequest) -> CallToolResult:
-    """Handle PDF info extraction requests."""
-    args = request.params.arguments or {}
-    
-    # Extract arguments
-    file_path = args.get("file_path")
-    include_text = args.get("include_text", False)
-    password = args.get("password")
-    
+async def _handle_pdf_info(args: dict) -> list[TextContent]:
+    file_path = _get_path_arg(args, "file_path", "path", "tex_path")
     if not file_path:
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text="Error: file_path is required",
-                )
-            ]
+        return _text_result(
+            "Error: file_path is required. Pass the path to the PDF file."
         )
-    
+
+    include_text = args.get("include_text", False)
     try:
-        # Run PDF info extraction in executor to avoid blocking
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
-            None,
-            extract_pdf_info,
-            file_path,
-            include_text,
-            password,
+            None, extract_pdf_info, file_path, include_text, args.get("password")
         )
-        
-        # Format response
+
         if result.success:
-            response_text = "✓ PDF info extracted successfully\n"
-            response_text += f"File: {result.file_path}\n"
-            response_text += f"Pages: {result.page_count}\n"
-            response_text += f"File size: {result.file_size_bytes:,} bytes\n"
-            
+            text = f"PDF info extracted\nFile: {result.file_path}"
+            text += f"\nPages: {result.page_count}"
+            text += f"\nFile size: {result.file_size_bytes:,} bytes"
             if result.pdf_version:
-                response_text += f"PDF version: {result.pdf_version}\n"
-            
-            if result.is_encrypted:
-                response_text += "Encrypted: Yes\n"
-            else:
-                response_text += "Encrypted: No\n"
-            
-            # Add page dimensions
+                text += f"\nPDF version: {result.pdf_version}"
+            text += f"\nEncrypted: {'Yes' if result.is_encrypted else 'No'}"
             if result.page_dimensions:
-                response_text += "Dimensions:\n"
+                text += "\nDimensions:"
                 for i, dims in enumerate(result.page_dimensions):
-                    response_text += f"  Page {i+1}: {dims['width']:.1f} x {dims['height']:.1f} {dims['unit']}\n"
-            
-            # Add metadata if available
-            if result.title:
-                response_text += f"Title: {result.title}\n"
-            if result.author:
-                response_text += f"Author: {result.author}\n"
-            if result.subject:
-                response_text += f"Subject: {result.subject}\n"
-            if result.producer:
-                response_text += f"Producer: {result.producer}\n"
-            if result.creator:
-                response_text += f"Creator: {result.creator}\n"
-            if result.creation_date:
-                response_text += f"Created: {result.creation_date}\n"
-            if result.modification_date:
-                response_text += f"Modified: {result.modification_date}\n"
-            
-            # Add text content if requested
+                    text += f"\n  Page {i + 1}: {dims['width']:.1f} x {dims['height']:.1f} {dims['unit']}"
+            for field, label in [
+                ("title", "Title"),
+                ("author", "Author"),
+                ("subject", "Subject"),
+                ("producer", "Producer"),
+                ("creator", "Creator"),
+                ("creation_date", "Created"),
+                ("modification_date", "Modified"),
+            ]:
+                val = getattr(result, field, None)
+                if val:
+                    text += f"\n{label}: {val}"
             if include_text and result.text_content:
-                response_text += "\nText content:\n"
-                for i, text in enumerate(result.text_content):
-                    if text.strip():  # Only show non-empty text
-                        response_text += f"  Page {i+1}: {text[:100]}...\n"
+                text += "\nText content:"
+                for i, page_text in enumerate(result.text_content):
+                    if page_text.strip():
+                        text += f"\n  Page {i + 1}: {page_text[:100]}..."
                     else:
-                        response_text += f"  Page {i+1}: [No text content]\n"
-            
-            # Add extraction time
+                        text += f"\n  Page {i + 1}: [No text content]"
             if result.extraction_time_seconds:
-                response_text += f"Extraction time: {result.extraction_time_seconds:.3f}s\n"
+                text += f"\nExtraction time: {result.extraction_time_seconds:.3f}s"
         else:
-            response_text = "✗ PDF info extraction failed\n"
+            text = "PDF info extraction failed"
             if result.error_message:
-                response_text += f"Error: {result.error_message}\n"
-            if result.extraction_time_seconds:
-                response_text += f"Extraction time: {result.extraction_time_seconds:.3f}s\n"
-        
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=response_text,
-                )
-            ]
-        )
-        
+                text += f"\nError: {result.error_message}"
+
+        return _text_result(text)
+
     except PDFInfoError as e:
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=f"PDF info error: {str(e)}",
-                )
-            ]
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error in pdf_info: {e}")
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=f"Unexpected error: {str(e)}",
-                )
-            ]
-        )
+        return _text_result(f"PDF info error: {e}")
 
 
-async def handle_cleanup(request: CallToolRequest) -> CallToolResult:
-    """Handle LaTeX cleanup requests."""
-    args = request.params.arguments or {}
-    
-    # Extract arguments
-    path = args.get("path")
-    extensions = args.get("extensions")
-    dry_run = args.get("dry_run", False)
-    recursive = args.get("recursive", False)
-    create_backup = args.get("create_backup", False)
-    
+async def _handle_cleanup(args: dict) -> list[TextContent]:
+    path = _get_path_arg(args, "path", "file_path", "tex_path")
     if not path:
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text="Error: path is required",
-                )
-            ]
+        return _text_result(
+            "Error: path is required. Pass the path to a .tex file or directory."
         )
-    
+
     try:
-        # Run cleanup in executor to avoid blocking
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
             None,
             clean_latex,
             path,
-            extensions,
-            dry_run,
-            recursive,
-            create_backup,
+            args.get("extensions"),
+            args.get("dry_run", False),
+            args.get("recursive", False),
+            args.get("create_backup", False),
         )
-        
-        # Format response
+
         if result.success:
             if result.dry_run:
-                response_text = "✓ Cleanup dry run completed\n"
                 if result.would_clean_files:
-                    response_text += f"Would clean {len(result.would_clean_files)} files:\n"
-                    for file in result.would_clean_files[:10]:  # Show first 10
-                        response_text += f"  • {file}\n"
+                    text = f"Cleanup dry run: would clean {len(result.would_clean_files)} files:"
+                    for f in result.would_clean_files[:10]:
+                        text += f"\n  - {f}"
                     if len(result.would_clean_files) > 10:
-                        response_text += f"  ... and {len(result.would_clean_files) - 10} more\n"
+                        text += f"\n  ... and {len(result.would_clean_files) - 10} more"
                 else:
-                    response_text += "No files to clean\n"
+                    text = "Cleanup dry run: no files to clean"
             else:
-                response_text = "✓ Cleanup completed successfully\n"
                 if result.cleaned_files:
-                    response_text += f"Files cleaned: {result.cleaned_files_count}\n"
-                    for file in result.cleaned_files[:10]:  # Show first 10
-                        response_text += f"  • {file}\n"
+                    text = f"Cleanup completed: {result.cleaned_files_count} files cleaned:"
+                    for f in result.cleaned_files[:10]:
+                        text += f"\n  - {f}"
                     if len(result.cleaned_files) > 10:
-                        response_text += f"  ... and {len(result.cleaned_files) - 10} more\n"
+                        text += f"\n  ... and {len(result.cleaned_files) - 10} more"
                 else:
-                    response_text += "No files needed cleaning\n"
-            
-            # Add details about the operation
+                    text = "Cleanup completed: no files needed cleaning"
+
             if result.tex_file_path:
-                response_text += f"Cleaned around: {result.tex_file_path}\n"
+                text += f"\nCleaned around: {result.tex_file_path}"
             elif result.directory_path:
-                response_text += f"Cleaned directory: {result.directory_path}\n"
-            
+                text += f"\nCleaned directory: {result.directory_path}"
             if result.backup_created:
-                response_text += f"Backup created: {result.backup_directory}\n"
-            
+                text += f"\nBackup created: {result.backup_directory}"
             if result.cleanup_time_seconds:
-                response_text += f"Cleanup time: {result.cleanup_time_seconds:.3f}s\n"
+                text += f"\nCleanup time: {result.cleanup_time_seconds:.3f}s"
         else:
-            response_text = "✗ Cleanup failed\n"
+            text = "Cleanup failed"
             if result.error_message:
-                response_text += f"Error: {result.error_message}\n"
-        
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=response_text,
-                )
-            ]
-        )
-        
+                text += f"\nError: {result.error_message}"
+
+        return _text_result(text)
+
     except CleanupError as e:
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=f"Cleanup error: {str(e)}",
-                )
-            ]
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error in cleanup: {e}")
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=f"Unexpected error: {str(e)}",
-                )
-            ]
-        )
+        return _text_result(f"Cleanup error: {e}")
 
 
 async def main():
     """Run the MCP server."""
     logger.info("Starting MCP LaTeX Tools server")
-    logger.debug(f"Server handlers: {list(server.request_handlers.keys())}")
-    
     async with stdio_server() as (read_stream, write_stream):
-        logger.debug("Got stdio streams, starting server.run()")
         await server.run(
             read_stream,
             write_stream,
