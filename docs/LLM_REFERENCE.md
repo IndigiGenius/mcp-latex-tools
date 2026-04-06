@@ -88,11 +88,15 @@ Remove .aux/.log files?
 
 ## File Extensions
 
-### Cleaned by cleanup tool
+### Cleaned by cleanup tool (common)
 `.aux`, `.log`, `.out`, `.fls`, `.fdb_latexmk`, `.toc`, `.lof`, `.lot`, `.bbl`, `.blg`, `.nav`, `.snm`, `.vrb`, `.idx`, `.ilg`, `.ind`, `.synctex.gz`
 
-### Protected (never deleted)
+For the full list (26 extensions), query the `latex://config/cleanup-extensions` resource.
+
+### Protected (never deleted, common)
 `.tex`, `.pdf`, `.bib`, `.sty`, `.cls`, `.png`, `.jpg`, `.eps`
+
+For the full list (20 extensions), query the `latex://config/protected-extensions` resource.
 
 ## Common Workflows
 

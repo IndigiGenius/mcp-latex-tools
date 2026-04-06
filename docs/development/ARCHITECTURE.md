@@ -41,10 +41,13 @@ mcp-latex-tools/
 │   └── utils/
 │       └── log_parser.py      # Token-optimized log parsing
 ├── tests/                     # Test suite (mirrors src structure)
+│   ├── fixtures/              # Test fixture files
 │   ├── test_compile.py
 │   ├── test_validate.py
 │   ├── test_pdf_info.py
+│   ├── test_pdf_info_edge_cases.py
 │   ├── test_cleanup.py
+│   ├── test_cleanup_edge_cases.py
 │   ├── test_log_parser.py
 │   ├── test_mcp_resources_prompts.py
 │   ├── test_server_integration.py
