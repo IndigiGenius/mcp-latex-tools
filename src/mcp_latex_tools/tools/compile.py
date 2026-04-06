@@ -4,9 +4,10 @@ import logging
 import re
 import subprocess
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Union
+
+from pydantic import BaseModel
 
 from mcp_latex_tools.utils.log_parser import parse_latex_log
 
@@ -21,8 +22,7 @@ class CompilationError(Exception):
     pass
 
 
-@dataclass
-class CompilationResult:
+class CompilationResult(BaseModel):
     """Result of LaTeX compilation."""
 
     success: bool

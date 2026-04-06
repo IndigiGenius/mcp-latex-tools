@@ -150,28 +150,28 @@ Each tool returns a structured result model. Models are being migrated from `dat
 | `LaTeXError` | `utils/log_parser.py` | Pydantic BaseModel |
 | `LogSummary` | `utils/log_parser.py` | Pydantic BaseModel |
 | `ValidationResult` | `tools/validate.py` | Pydantic BaseModel |
-| `CompilationResult` | `tools/compile.py` | dataclass (pending) |
-| `PackageDetectionResult` | `tools/detect_packages.py` | dataclass (pending) |
+| `CompilationResult` | `tools/compile.py` | Pydantic BaseModel |
+| `PackageDetectionResult` | `tools/detect_packages.py` | Pydantic BaseModel |
 | `CleanupResult` | `tools/cleanup.py` | dataclass (pending) |
 | `PDFInfoResult` | `tools/pdf_info.py` | dataclass (pending) |
 
 ```python
-# Already migrated (Part 1)
-class ValidationResult(BaseModel):
-    is_valid: bool
-    error_message: Optional[str]
-    errors: list[str]
-    warnings: list[str]
-    validation_time_seconds: Optional[float] = None
-
-# Pending migration (Parts 2-3)
-@dataclass
-class CompilationResult:
+# Already migrated (Parts 1-2)
+class CompilationResult(BaseModel):
     success: bool
     output_path: Optional[str] = None
     error_message: Optional[str] = None
     log_content: Optional[str] = None
     compilation_time_seconds: Optional[float] = None
+
+# Pending migration (Part 3)
+@dataclass
+class CleanupResult:
+    success: bool
+    error_message: Optional[str]
+    cleaned_files_count: int
+    cleaned_files: List[str]
+    ...
 ```
 
 **Benefits**:
@@ -284,6 +284,6 @@ See [BACKLOG.md](BACKLOG.md) for the full feature backlog and prioritization.
 ---
 
 **Document Version History**:
-- 2026-04-06: Added Pydantic migration status table (26Q2-REFAC-01)
+- 2026-04-06: Updated Pydantic migration status — Parts 1 & 2 complete (26Q2-REFAC-01, 26Q2-REFAC-02)
 - 2026-04-05: Major rewrite — updated for post-cleanup architecture
 - 2025-10-22: Initial architecture document
