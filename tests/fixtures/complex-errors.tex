@@ -1,0 +1,31 @@
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{graphicx}
+
+\begin{document}
+
+\section{Test Document with Errors}
+
+This document intentionally has errors to test error reporting.
+
+% Missing closing brace
+\textbf{This text is bold
+
+% Undefined command
+\invalidcommand{test}
+
+% Unmatched environment
+\begin{itemize}
+\item First item
+\item Second item
+% Missing \end{itemize}
+
+\section{More Errors}
+
+% Reference that doesn't exist
+See Figure~\ref{fig:nonexistent}.
+
+% Unicode character that may cause issues
+Some text with special chars: ─
+
+\end{document}
