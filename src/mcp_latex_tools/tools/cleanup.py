@@ -3,10 +3,11 @@
 import logging
 import shutil
 import time
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Set
+
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +18,7 @@ class CleanupError(Exception):
     pass
 
 
-@dataclass
-class CleanupResult:
+class CleanupResult(BaseModel):
     """Result of LaTeX cleanup operation."""
 
     success: bool

@@ -1,10 +1,10 @@
 """PDF metadata extraction tool for getting document information."""
 
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 
@@ -15,8 +15,7 @@ class PDFInfoError(Exception):
     pass
 
 
-@dataclass
-class PDFInfoResult:
+class PDFInfoResult(BaseModel):
     """Result of PDF metadata extraction."""
 
     success: bool
