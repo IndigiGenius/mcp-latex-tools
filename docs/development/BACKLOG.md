@@ -1,12 +1,12 @@
 # MCP LaTeX Tools Development Backlog
 
-This document tracks features and improvements planned beyond the current quarter. For Q1 2026 work, see [sprints/UPCOMING.md](../sprints/UPCOMING.md).
+This document tracks features and improvements planned for future development.
 
-**Last Updated**: 2026-01-24
+**Last Updated**: 2026-04-05
 
 ---
 
-## Q2 2026 Candidates
+## Near-Term Candidates
 
 ### Pydantic Migration
 **Priority**: HIGH | **Effort**: 2-3 weeks
@@ -62,7 +62,7 @@ Smart error suggestions and automatic retry logic.
 
 ---
 
-## Q3 2026 Candidates
+## Future Candidates
 
 ### Multi-file Project Support
 **Priority**: LOW | **Effort**: 5-8 days
@@ -182,7 +182,9 @@ tests/
 
 ### Q1 2026
 
-See [sprints/archive/](../sprints/archive/) for completed sprint details.
+- [x] **Dead Code Removal** (Mar 2026): Removed `latex_utils.py`, consolidated constants
+- [x] **Server Refactor** (Mar 2026): Simplified server.py, inline handlers
+- [x] **Documentation Trim** (Apr 2026): Reduced docs from ~6,600 to ~800 lines
 
 ---
 
@@ -206,4 +208,4 @@ See [sprints/archive/](../sprints/archive/) for completed sprint details.
 
 ---
 
-*Next Review: End of Q1 2026*
+*Next Review: End of Q2 2026*

@@ -54,4 +54,4 @@ docs/                # Documentation
 | `docs/development/BACKLOG.md` | Feature backlog |
 
 ---
-*Last Updated: 2026-03-15*
+*Last Updated: 2026-04-05*
