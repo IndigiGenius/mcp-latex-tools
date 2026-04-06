@@ -34,7 +34,7 @@ mcp-latex-tools/
 ├── src/mcp_latex_tools/
 │   ├── server.py              # MCP server entry point
 │   ├── tools/
-│   │   ├── compile.py         # LaTeX compilation
+│   │   ├── compile.py         # LaTeX compilation (pdflatex/xelatex/lualatex/latexmk, multi-pass)
 │   │   ├── validate.py        # Syntax validation
 │   │   ├── pdf_info.py        # PDF metadata extraction
 │   │   └── cleanup.py         # Auxiliary file cleanup
@@ -70,7 +70,7 @@ mcp-latex-tools/
 - Implements token-optimized output
 
 #### Layer 2: Tool Implementation (tools/)
-- **compile.py**: LaTeX → PDF compilation with error handling
+- **compile.py**: LaTeX → PDF compilation with multi-engine (pdflatex/xelatex/lualatex/latexmk), multi-pass, and automatic bibliography (bibtex/biber) support
 - **validate.py**: Syntax checking without compilation
 - **pdf_info.py**: PDF metadata extraction
 - **cleanup.py**: Auxiliary file management
