@@ -186,6 +186,10 @@ tests/
 - [x] **Server Refactor** (Mar 2026): Simplified server.py, inline handlers
 - [x] **Documentation Trim** (Apr 2026): Reduced docs from ~6,600 to ~800 lines
 
+### Q2 2026
+
+- [x] **Multi-Engine & Multi-Pass Compilation** (Apr 2026): 26Q2-ENH-01 — pdflatex/xelatex/lualatex/latexmk, auto passes, bibtex/biber support
+
 ---
 
 ## Prioritization Criteria
