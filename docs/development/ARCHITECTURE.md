@@ -150,8 +150,8 @@ Each tool returns a structured result model. Models are being migrated from `dat
 | `LaTeXError` | `utils/log_parser.py` | Pydantic BaseModel |
 | `LogSummary` | `utils/log_parser.py` | Pydantic BaseModel |
 | `ValidationResult` | `tools/validate.py` | Pydantic BaseModel |
-| `CompilationResult` | `tools/compile.py` | dataclass (pending) |
-| `PackageDetectionResult` | `tools/detect_packages.py` | dataclass (pending) |
+| `CompilationResult` | `tools/compile.py` | Pydantic BaseModel |
+| `PackageDetectionResult` | `tools/detect_packages.py` | Pydantic BaseModel |
 | `CleanupResult` | `tools/cleanup.py` | dataclass (pending) |
 | `PDFInfoResult` | `tools/pdf_info.py` | dataclass (pending) |
 
@@ -284,6 +284,6 @@ See [BACKLOG.md](BACKLOG.md) for the full feature backlog and prioritization.
 ---
 
 **Document Version History**:
-- 2026-04-06: Added Pydantic migration status table (26Q2-REFAC-01)
+- 2026-04-06: Updated Pydantic migration status — Parts 1 & 2 complete (26Q2-REFAC-01, 26Q2-REFAC-02)
 - 2026-04-05: Major rewrite — updated for post-cleanup architecture
 - 2025-10-22: Initial architecture document

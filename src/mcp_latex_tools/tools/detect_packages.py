@@ -4,9 +4,10 @@ import re
 import shutil
 import subprocess
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+
+from pydantic import BaseModel
 
 
 class PackageDetectionError(Exception):
@@ -15,8 +16,7 @@ class PackageDetectionError(Exception):
     pass
 
 
-@dataclass
-class PackageDetectionResult:
+class PackageDetectionResult(BaseModel):
     """Result of LaTeX package detection."""
 
     success: bool
