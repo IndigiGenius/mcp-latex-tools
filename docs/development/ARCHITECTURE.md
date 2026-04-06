@@ -156,11 +156,21 @@ Each tool returns a structured result model. Models are being migrated from `dat
 | `PDFInfoResult` | `tools/pdf_info.py` | dataclass (pending) |
 
 ```python
-class CompilationResult(BaseModel):
+# Already migrated (Part 1)
+class ValidationResult(BaseModel):
+    is_valid: bool
+    error_message: Optional[str]
+    errors: list[str]
+    warnings: list[str]
+    validation_time_seconds: Optional[float] = None
+
+# Pending migration (Parts 2-3)
+@dataclass
+class CompilationResult:
     success: bool
     output_path: Optional[str] = None
     error_message: Optional[str] = None
-    log_content: Optional[str] = None  # Full log for internal use
+    log_content: Optional[str] = None
     compilation_time_seconds: Optional[float] = None
 ```
 
