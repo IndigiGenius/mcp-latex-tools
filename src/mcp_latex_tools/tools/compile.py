@@ -45,9 +45,7 @@ def _detect_bib_tool(tex_content: str) -> Optional[str]:
     return None
 
 
-def _build_engine_cmd(
-    engine: str, output_path: Path, tex_file: Path
-) -> list[str]:
+def _build_engine_cmd(engine: str, output_path: Path, tex_file: Path) -> list[str]:
     """Build the command list for the given engine."""
     if engine == "latexmk":
         return [
@@ -235,9 +233,7 @@ def _compile_latexmk(
     log_content = _read_log(output_path, tex_file.stem)
 
     # Count latexmk passes from log
-    passes_run = max(
-        1, len(re.findall(r"Rule.*pdflatex|Run number \d+", log_content))
-    )
+    passes_run = max(1, len(re.findall(r"Rule.*pdflatex|Run number \d+", log_content)))
 
     if result.returncode == 0 and pdf_path.exists():
         return CompilationResult(
@@ -292,11 +288,7 @@ def _compile_multi_pass(
         log_content = _read_log(output_path, tex_file.stem)
 
         # If the engine hard-fails on first pass, stop immediately
-        if (
-            last_result.returncode != 0
-            and pass_num == 1
-            and not pdf_path.exists()
-        ):
+        if last_result.returncode != 0 and pass_num == 1 and not pdf_path.exists():
             break
 
         # Run bibliography tool after first pass
