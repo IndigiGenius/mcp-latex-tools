@@ -17,10 +17,16 @@ class TestMCPServerIntegration:
         result = await list_tools()
 
         assert result is not None
-        assert len(result) == 4
+        assert len(result) == 5
 
         names = {t.name for t in result}
-        assert names == {"compile_latex", "validate_latex", "pdf_info", "cleanup"}
+        assert names == {
+            "compile_latex",
+            "validate_latex",
+            "pdf_info",
+            "cleanup",
+            "detect_packages",
+        }
 
         # Check tool schemas have required properties
         tool_map = {t.name: t for t in result}
@@ -28,6 +34,7 @@ class TestMCPServerIntegration:
         assert "file_path" in tool_map["validate_latex"].inputSchema["properties"]
         assert "file_path" in tool_map["pdf_info"].inputSchema["properties"]
         assert "path" in tool_map["cleanup"].inputSchema["properties"]
+        assert "file_path" in tool_map["detect_packages"].inputSchema["properties"]
 
     @pytest.mark.asyncio
     async def test_compile_latex_tool_success(self):

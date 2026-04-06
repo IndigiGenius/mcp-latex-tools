@@ -10,6 +10,7 @@ Quick reference for LLM agents using MCP LaTeX Tools.
 | `validate_latex` | Syntax check | `file_path` (required), `quick`, `strict` | None (read-only) |
 | `pdf_info` | PDF metadata | `file_path` (required), `include_text` | None (read-only) |
 | `cleanup` | Remove aux files | `path` (required), `dry_run`, `recursive` | Deletes files |
+| `detect_packages` | Find required packages | `file_path` (required), `check_installed` | None (read-only) |
 
 ## Recommended Workflow
 
@@ -54,6 +55,9 @@ Check PDF properties?
 
 Remove .aux/.log files?
   -> cleanup (use dry_run=true first)
+
+Missing packages?
+  -> detect_packages (shows what's missing + tlmgr install commands)
 ```
 
 ## Error Recovery Patterns
@@ -61,7 +65,7 @@ Remove .aux/.log files?
 | Symptom | Action |
 |---------|--------|
 | Compilation fails | Run `validate_latex` first to identify syntax errors |
-| Validate passes, compile fails | Check for missing packages in error message |
+| Validate passes, compile fails | Run `detect_packages` to check for missing packages |
 | "File not found" | Verify file path is absolute or relative to CWD |
 | "Permission denied" | Check file/directory permissions |
 | Timeout | Increase `timeout` parameter (default: 30s) |
@@ -90,6 +94,10 @@ Remove .aux/.log files?
 - `recursive`: false (set true to clean subdirectories)
 - `create_backup`: false (set true to backup before deletion)
 
+### detect_packages
+- `check_installed`: true (set false for parse-only mode without kpsewhich)
+- Returns: `packages` (all detected), `installed`, `missing`, `install_commands`
+
 ## Response Parsing
 
 ### Success Indicators
@@ -97,6 +105,7 @@ Remove .aux/.log files?
 - `validate_latex`: Check `is_valid` field
 - `pdf_info`: Check `success` field
 - `cleanup`: Check `success` field
+- `detect_packages`: Check `success` field; inspect `missing` list
 
 ### Error Information
 - All tools include `error_message` on failure

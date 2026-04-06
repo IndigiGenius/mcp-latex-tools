@@ -26,6 +26,10 @@ from mcp_latex_tools.tools.cleanup import (
     DEFAULT_CLEANUP_EXTENSIONS,
     PROTECTED_EXTENSIONS,
 )
+from mcp_latex_tools.tools.detect_packages import (
+    detect_packages,
+    PackageDetectionError,
+)
 from mcp_latex_tools.utils.log_parser import get_error_summary
 
 logging.basicConfig(
@@ -168,6 +172,25 @@ async def list_tools() -> list[Tool]:
                 "required": ["path"],
             },
         ),
+        Tool(
+            name="detect_packages",
+            description="Detect LaTeX packages required by a .tex file. Checks if each package is installed via kpsewhich and suggests tlmgr install commands for missing ones.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to the .tex file to analyze",
+                    },
+                    "check_installed": {
+                        "type": "boolean",
+                        "description": "Check if packages are installed via kpsewhich (default: true). Set false for parse-only mode.",
+                        "default": True,
+                    },
+                },
+                "required": ["file_path"],
+            },
+        ),
     ]
 
 
@@ -235,7 +258,7 @@ async def read_resource(uri: AnyUrl) -> str:
 
 ## Error Recovery
 If compilation fails, run `validate_latex` to identify syntax errors.
-If validation passes but compilation fails, check for missing packages or increase timeout.
+If validation passes but compilation fails, run `detect_packages` to check for missing packages, or increase timeout.
 """
 
     raise ValueError(f"Unknown resource: {uri_str}")
@@ -405,6 +428,8 @@ async def call_tool(tool_name: str, arguments: dict) -> list[TextContent]:  # ty
             return await _handle_pdf_info(arguments)
         elif tool_name == "cleanup":
             return await _handle_cleanup(arguments)
+        elif tool_name == "detect_packages":
+            return await _handle_detect_packages(arguments)
         else:
             raise ValueError(f"Unknown tool: {tool_name}")
     except Exception as e:
@@ -619,6 +644,50 @@ async def _handle_cleanup(args: dict) -> list[TextContent]:
 
     except CleanupError as e:
         return _text_result(f"Cleanup error: {e}")
+
+
+async def _handle_detect_packages(args: dict) -> list[TextContent]:
+    file_path = _get_path_arg(args, "file_path", "tex_path", "path")
+    if not file_path:
+        return _text_result(
+            "Error: file_path is required. Pass the path to the .tex file."
+        )
+
+    check_installed = args.get("check_installed", True)
+
+    try:
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: detect_packages(file_path, check_installed=check_installed),
+        )
+
+        if result.success:
+            text = f"Packages detected: {len(result.packages)}"
+            if result.packages:
+                text += f"\nPackages: {', '.join(result.packages)}"
+            if result.installed:
+                text += f"\nInstalled ({len(result.installed)}): {', '.join(result.installed)}"
+            if result.missing:
+                text += (
+                    f"\nMissing ({len(result.missing)}): {', '.join(result.missing)}"
+                )
+                text += "\nInstall commands:"
+                for cmd in result.install_commands:
+                    text += f"\n  {cmd}"
+            elif check_installed and result.packages:
+                text += "\nAll packages are installed"
+            if result.detection_time_seconds:
+                text += f"\nDetection time: {result.detection_time_seconds:.3f}s"
+        else:
+            text = "Package detection failed"
+            if result.error_message:
+                text += f"\nError: {result.error_message}"
+
+        return _text_result(text)
+
+    except PackageDetectionError as e:
+        return _text_result(f"Package detection error: {e}")
 
 
 async def main():
