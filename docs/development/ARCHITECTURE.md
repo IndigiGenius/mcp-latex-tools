@@ -1,6 +1,6 @@
 # MCP LaTeX Tools Architecture Documentation
 
-**Last Updated**: 2026-04-05
+**Last Updated**: 2026-04-06
 **Version**: 2.0
 
 ## Table of Contents
@@ -139,13 +139,24 @@ Each tool follows a consistent schema pattern:
 
 ## Tool Design Patterns
 
-### Pattern 1: Result Dataclasses
+### Pattern 1: Result Models
 
-Each tool returns a structured result:
+Each tool returns a structured result model. Models are being migrated from `dataclasses` to Pydantic `BaseModel` for automatic validation, JSON schema generation, and richer serialization.
+
+**Migration Status**:
+
+| Model | Module | Status |
+|-------|--------|--------|
+| `LaTeXError` | `utils/log_parser.py` | Pydantic BaseModel |
+| `LogSummary` | `utils/log_parser.py` | Pydantic BaseModel |
+| `ValidationResult` | `tools/validate.py` | Pydantic BaseModel |
+| `CompilationResult` | `tools/compile.py` | dataclass (pending) |
+| `PackageDetectionResult` | `tools/detect_packages.py` | dataclass (pending) |
+| `CleanupResult` | `tools/cleanup.py` | dataclass (pending) |
+| `PDFInfoResult` | `tools/pdf_info.py` | dataclass (pending) |
 
 ```python
-@dataclass
-class CompilationResult:
+class CompilationResult(BaseModel):
     success: bool
     output_path: Optional[str] = None
     error_message: Optional[str] = None
@@ -158,6 +169,8 @@ class CompilationResult:
 - Clear success/failure states
 - Comprehensive error information
 - Performance metrics included
+- Automatic input validation (Pydantic models)
+- JSON schema generation for MCP (Pydantic models)
 
 ### Pattern 2: Graceful Error Handling
 
@@ -246,6 +259,7 @@ See [BACKLOG.md](BACKLOG.md) for the full feature backlog and prioritization.
 
 ### Key Technologies
 - **MCP**: Model Context Protocol for Claude Code integration
+- **Pydantic**: Data validation and serialization (transitive via mcp)
 - **pypdf**: PDF metadata extraction
 - **pytest**: Testing framework with async support
 - **ruff**: Modern Python linter and formatter
@@ -260,5 +274,6 @@ See [BACKLOG.md](BACKLOG.md) for the full feature backlog and prioritization.
 ---
 
 **Document Version History**:
+- 2026-04-06: Added Pydantic migration status table (26Q2-REFAC-01)
 - 2026-04-05: Major rewrite — updated for post-cleanup architecture
 - 2025-10-22: Initial architecture document

@@ -2,9 +2,10 @@
 
 import re
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+
+from pydantic import BaseModel
 
 
 class ValidationError(Exception):
@@ -13,8 +14,7 @@ class ValidationError(Exception):
     pass
 
 
-@dataclass
-class ValidationResult:
+class ValidationResult(BaseModel):
     """Result of LaTeX validation."""
 
     is_valid: bool
