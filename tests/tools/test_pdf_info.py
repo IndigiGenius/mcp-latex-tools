@@ -14,7 +14,7 @@ class TestExtractPDFInfo:
     def test_extract_pdf_info_with_valid_file_returns_metadata(self):
         """Test PDF info extraction from a valid PDF file."""
         # Use the simple.pdf fixture
-        pdf_path = Path(__file__).parent / "fixtures" / "simple.pdf"
+        pdf_path = Path(__file__).parent.parent / "fixtures" / "simple.pdf"
 
         result = extract_pdf_info(str(pdf_path))
 
@@ -40,7 +40,7 @@ class TestExtractPDFInfo:
         """Test PDF info extraction handles multiple pages correctly."""
         # Create a temporary multi-page PDF for testing
         # This would normally be a more complex PDF, but we'll use simple.pdf
-        pdf_path = Path(__file__).parent / "fixtures" / "simple.pdf"
+        pdf_path = Path(__file__).parent.parent / "fixtures" / "simple.pdf"
 
         result = extract_pdf_info(str(pdf_path))
 
@@ -60,7 +60,7 @@ class TestExtractPDFInfo:
 
     def test_extract_pdf_info_includes_detailed_metadata(self):
         """Test that PDF info extraction includes comprehensive metadata."""
-        pdf_path = Path(__file__).parent / "fixtures" / "simple.pdf"
+        pdf_path = Path(__file__).parent.parent / "fixtures" / "simple.pdf"
 
         result = extract_pdf_info(str(pdf_path))
 
@@ -132,7 +132,7 @@ class TestExtractPDFInfo:
     def test_extract_pdf_info_with_non_pdf_file_returns_error(self):
         """Test PDF info extraction with non-PDF file."""
         # Use a text file instead of PDF
-        tex_path = Path(__file__).parent / "fixtures" / "simple.tex"
+        tex_path = Path(__file__).parent.parent / "fixtures" / "simple.tex"
 
         result = extract_pdf_info(str(tex_path))
 
@@ -143,7 +143,7 @@ class TestExtractPDFInfo:
 
     def test_extract_pdf_info_with_include_text_flag(self):
         """Test PDF info extraction with text content extraction."""
-        pdf_path = Path(__file__).parent / "fixtures" / "simple.pdf"
+        pdf_path = Path(__file__).parent.parent / "fixtures" / "simple.pdf"
 
         result = extract_pdf_info(str(pdf_path), include_text=True)
 
@@ -159,7 +159,7 @@ class TestExtractPDFInfo:
 
     def test_extract_pdf_info_without_include_text_flag(self):
         """Test PDF info extraction without text content extraction."""
-        pdf_path = Path(__file__).parent / "fixtures" / "simple.pdf"
+        pdf_path = Path(__file__).parent.parent / "fixtures" / "simple.pdf"
 
         result = extract_pdf_info(str(pdf_path), include_text=False)
 
@@ -171,7 +171,7 @@ class TestExtractPDFInfo:
         """Test PDF info extraction with password-protected PDF."""
         # This test would require a password-protected PDF fixture
         # For now, we'll test the parameter structure
-        pdf_path = Path(__file__).parent / "fixtures" / "simple.pdf"
+        pdf_path = Path(__file__).parent.parent / "fixtures" / "simple.pdf"
 
         # Test with wrong password - should handle gracefully
         result = extract_pdf_info(str(pdf_path), password="wrongpassword")
@@ -182,7 +182,7 @@ class TestExtractPDFInfo:
 
     def test_extract_pdf_info_performance_timing(self):
         """Test that PDF info extraction includes timing information."""
-        pdf_path = Path(__file__).parent / "fixtures" / "simple.pdf"
+        pdf_path = Path(__file__).parent.parent / "fixtures" / "simple.pdf"
 
         result = extract_pdf_info(str(pdf_path))
 
@@ -241,7 +241,7 @@ class TestExtractPDFInfo:
 
     def test_extract_pdf_info_with_detailed_page_info(self):
         """Test that page dimensions include detailed information."""
-        pdf_path = Path(__file__).parent / "fixtures" / "simple.pdf"
+        pdf_path = Path(__file__).parent.parent / "fixtures" / "simple.pdf"
 
         result = extract_pdf_info(str(pdf_path))
 
@@ -262,7 +262,7 @@ class TestExtractPDFInfo:
         """Test PDF info extraction handles permission errors gracefully."""
         # This test would require a file with restricted permissions
         # For now, we'll test the basic error handling structure
-        pdf_path = Path(__file__).parent / "fixtures" / "simple.pdf"
+        pdf_path = Path(__file__).parent.parent / "fixtures" / "simple.pdf"
 
         result = extract_pdf_info(str(pdf_path))
 

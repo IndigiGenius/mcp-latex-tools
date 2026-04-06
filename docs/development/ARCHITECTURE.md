@@ -43,17 +43,20 @@ mcp-latex-tools/
 │       └── log_parser.py      # Token-optimized log parsing
 ├── tests/                     # Test suite (mirrors src structure)
 │   ├── fixtures/              # Test fixture files
-│   ├── test_compile.py
-│   ├── test_validate.py
-│   ├── test_pdf_info.py
-│   ├── test_pdf_info_edge_cases.py
-│   ├── test_cleanup.py
-│   ├── test_cleanup_edge_cases.py
-│   ├── test_log_parser.py
-│   ├── test_mcp_resources_prompts.py
-│   ├── test_detect_packages.py
-│   ├── test_server_integration.py
-│   └── test_server_error_handling.py
+│   ├── tools/                 # Tool unit tests
+│   │   ├── test_compile.py
+│   │   ├── test_validate.py
+│   │   ├── test_pdf_info.py
+│   │   ├── test_pdf_info_edge_cases.py
+│   │   ├── test_cleanup.py
+│   │   ├── test_cleanup_edge_cases.py
+│   │   └── test_detect_packages.py
+│   ├── utils/                 # Utility unit tests
+│   │   └── test_log_parser.py
+│   └── integration/           # Integration tests
+│       ├── test_server_integration.py
+│       ├── test_server_error_handling.py
+│       └── test_mcp_resources_prompts.py
 ├── docs/                      # Documentation
 │   ├── LLM_REFERENCE.md
 │   ├── README.md
@@ -272,6 +275,7 @@ See [BACKLOG.md](BACKLOG.md) for the full feature backlog and prioritization.
 ---
 
 **Document Version History**:
+- 2026-04-06: Test organization — tests moved into tools/, utils/, integration/ subdirectories (26Q2-DEBT-01)
 - 2026-04-06: Completed Pydantic migration — all 7 result classes (26Q2-REFAC-01/02/03)
 - 2026-04-05: Major rewrite — updated for post-cleanup architecture
 - 2025-10-22: Initial architecture document

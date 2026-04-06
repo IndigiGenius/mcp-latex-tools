@@ -25,7 +25,11 @@ src/mcp_latex_tools/
 ├── server.py        # MCP server entry point
 ├── tools/           # compile, validate, pdf_info, cleanup
 └── utils/           # log_parser
-tests/               # Test files and fixtures
+tests/               # Test suite
+├── tools/           # Tool unit tests
+├── utils/           # Utility unit tests
+├── integration/     # Integration tests
+└── fixtures/        # Test fixture files
 docs/                # Documentation
 docs/tasks/          # Task definitions (one per task ID)
 ```
