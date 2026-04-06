@@ -1,5 +1,6 @@
 """LaTeX compilation tool for MCP server."""
 
+import logging
 import re
 import subprocess
 import time
@@ -8,6 +9,8 @@ from pathlib import Path
 from typing import Optional, Union
 
 from mcp_latex_tools.utils.log_parser import parse_latex_log
+
+logger = logging.getLogger(__name__)
 
 SUPPORTED_ENGINES = ("pdflatex", "xelatex", "lualatex", "latexmk")
 
@@ -291,12 +294,12 @@ def _compile_multi_pass(
         if last_result.returncode != 0 and pass_num == 1 and not pdf_path.exists():
             break
 
-        # Run bibliography tool after first pass
-        if pass_num == 1 and bib_tool:
+        # Run bibliography tool after first pass (only if more passes follow)
+        if pass_num == 1 and bib_tool and max_passes > 1:
             try:
                 _run_bib_tool(bib_tool, tex_file.stem, output_path, timeout)
-            except (subprocess.TimeoutExpired, FileNotFoundError):
-                pass  # Non-fatal — continue compilation
+            except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+                logger.warning("Bibliography tool %s failed: %s", bib_tool, e)
 
         # For "auto" mode: check if another pass is needed
         if passes == "auto" and pass_num < max_passes:
@@ -309,7 +312,8 @@ def _compile_multi_pass(
 
     compilation_time = time.time() - start_time
 
-    if pdf_path.exists():
+    final_returncode = last_result.returncode if last_result else 1
+    if final_returncode == 0 and pdf_path.exists():
         return CompilationResult(
             success=True,
             output_path=str(pdf_path),
@@ -319,7 +323,7 @@ def _compile_multi_pass(
             passes_run=passes_run,
         )
 
-    returncode = last_result.returncode if last_result else 1
+    returncode = final_returncode
     error_msg = f"LaTeX compilation failed with return code {returncode}"
     if last_result and last_result.stderr:
         error_msg += f": {last_result.stderr}"
