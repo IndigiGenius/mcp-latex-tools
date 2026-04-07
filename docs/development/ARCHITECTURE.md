@@ -33,6 +33,7 @@ MCP LaTeX Tools is a production-ready Model Context Protocol server providing La
 mcp-latex-tools/
 ├── src/mcp_latex_tools/
 │   ├── server.py              # MCP server entry point
+│   ├── config.py              # Configuration system (TOML-based)
 │   ├── tools/
 │   │   ├── compile.py         # LaTeX compilation (pdflatex/xelatex/lualatex/latexmk, multi-pass)
 │   │   ├── validate.py        # Syntax validation
@@ -42,6 +43,7 @@ mcp-latex-tools/
 │   └── utils/
 │       └── log_parser.py      # Token-optimized log parsing
 ├── tests/                     # Test suite (mirrors src structure)
+│   ├── test_config.py         # Configuration system tests
 │   ├── fixtures/              # Test fixture files
 │   ├── tools/                 # Tool unit tests
 │   │   ├── test_compile.py
@@ -68,11 +70,19 @@ mcp-latex-tools/
 
 ### Architectural Layers
 
+#### Layer 0: Configuration (config.py)
+- Loads project-level defaults from `.mcp-latex-tools.toml` (TOML via stdlib `tomllib`)
+- Pydantic v2 models: `ToolConfig` with sections for compilation, validation, cleanup, pdf_info, detect_packages
+- Walk-up file discovery (cwd → parent → ... → root)
+- Fail-open: malformed config logs warning, falls back to hardcoded defaults
+- Override precedence: MCP call args > config file > hardcoded defaults
+
 #### Layer 1: MCP Protocol Handler (server.py)
 - Handles MCP JSON-RPC communication
 - Routes tool calls to appropriate handlers
 - Formats responses for Claude Code consumption
 - Implements token-optimized output
+- Loads config at startup and uses it for default values
 
 #### Layer 2: Tool Implementation (tools/)
 - **compile.py**: LaTeX → PDF compilation with multi-engine (pdflatex/xelatex/lualatex/latexmk), multi-pass, and automatic bibliography (bibtex/biber) support
@@ -275,6 +285,7 @@ See [BACKLOG.md](BACKLOG.md) for the full feature backlog and prioritization.
 ---
 
 **Document Version History**:
+- 2026-04-06: Configuration system — TOML-based project config with Pydantic models (26Q2-ENH-02)
 - 2026-04-06: Test organization — tests moved into tools/, utils/, integration/ subdirectories (26Q2-DEBT-01)
 - 2026-04-06: Completed Pydantic migration — all 7 result classes (26Q2-REFAC-01/02/03)
 - 2026-04-05: Major rewrite — updated for post-cleanup architecture
