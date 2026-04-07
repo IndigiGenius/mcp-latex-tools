@@ -14,26 +14,9 @@ Migrated all 7 result classes from dataclasses to Pydantic BaseModel in 3 PRs (2
 
 ---
 
-### Configuration System
-**Priority**: MEDIUM | **Effort**: 1-2 weeks
+### ~~Configuration System~~ ✅ COMPLETE (Apr 2026)
 
-Central configuration management for project and user preferences.
-
-**Proposed Config** (`.mcp-latex-tools.yml`):
-```yaml
-compilation:
-  engine: pdflatex  # or xelatex, lualatex
-  timeout: 60
-  passes: auto
-
-validation:
-  strict: false
-  max_errors: 10
-
-cleanup:
-  dry_run_by_default: true
-  extensions: [.aux, .log, .out]
-```
+TOML-based config file (`.mcp-latex-tools.toml`) with Pydantic v2 models (26Q2-ENH-02). Walk-up file discovery, fail-open design, no new dependencies. Remaining scope for future work: environment variable overrides, global config, config reload.
 
 ---
 
@@ -156,6 +139,7 @@ Reorganized all 11 test files into `tests/tools/`, `tests/utils/`, `tests/integr
 - [x] **Pydantic Migration Part 2** (Apr 2026): 26Q2-REFAC-02 — CompilationResult, PackageDetectionResult migrated; pydantic>=2.0 added as explicit dependency
 - [x] **Pydantic Migration Part 3** (Apr 2026): 26Q2-REFAC-03 — CleanupResult, PDFInfoResult migrated; all 7 result classes now Pydantic BaseModel
 - [x] **Test Organization** (Apr 2026): 26Q2-DEBT-01 — Tests reorganized into tools/, utils/, integration/ subdirectories
+- [x] **Configuration System** (Apr 2026): 26Q2-ENH-02 — TOML-based config file with Pydantic v2 models, walk-up discovery, fail-open design
 
 ---
 
