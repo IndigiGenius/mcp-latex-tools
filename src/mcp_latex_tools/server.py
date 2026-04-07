@@ -40,6 +40,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 server: Server = Server("mcp-latex-tools")
+# Config loaded once at startup; provides runtime defaults for tool handlers.
+# Note: "default" values in the MCP inputSchema below are informational for
+# MCP clients and may differ from runtime config file overrides.
 _config = load_config()
 
 

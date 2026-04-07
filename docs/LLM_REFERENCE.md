@@ -82,7 +82,6 @@ passes = "auto"       # default: 1
 
 [validation]
 strict = true         # default: false
-max_errors = 5        # default: 10
 
 [cleanup]
 dry_run = true        # default: false

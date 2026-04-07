@@ -50,7 +50,6 @@ assert cfg.compilation.passes == 1
 assert cfg.compilation.timeout == 30
 assert cfg.validation.quick is False
 assert cfg.validation.strict is False
-assert cfg.validation.max_errors == 10
 assert cfg.cleanup.dry_run is False
 assert cfg.cleanup.recursive is False
 assert cfg.cleanup.create_backup is False

@@ -7,7 +7,7 @@ Override precedence: MCP call args > config file > hardcoded defaults.
 import logging
 import tomllib
 from pathlib import Path
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel
 
@@ -20,7 +20,7 @@ class CompilationConfig(BaseModel):
     """Defaults for the compile_latex tool."""
 
     engine: str = "pdflatex"
-    passes: Union[int, str] = 1
+    passes: Union[int, Literal["auto"]] = 1
     timeout: int = 30
 
 
@@ -29,7 +29,6 @@ class ValidationConfig(BaseModel):
 
     quick: bool = False
     strict: bool = False
-    max_errors: int = 10
 
 
 class CleanupConfig(BaseModel):

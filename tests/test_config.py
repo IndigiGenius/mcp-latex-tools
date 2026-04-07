@@ -27,7 +27,6 @@ class TestToolConfigDefaults:
         cfg = ToolConfig()
         assert cfg.validation.quick is False
         assert cfg.validation.strict is False
-        assert cfg.validation.max_errors == 10
 
     def test_default_cleanup(self) -> None:
         cfg = ToolConfig()
@@ -83,6 +82,10 @@ class TestToolConfigPartial:
     def test_invalid_timeout_type_rejected(self) -> None:
         with pytest.raises(ValidationError):
             CompilationConfig(timeout="not_a_number")  # type: ignore[arg-type]
+
+    def test_invalid_passes_string_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            CompilationConfig(passes="banana")  # type: ignore[arg-type]
 
     def test_invalid_dry_run_type_rejected(self) -> None:
         with pytest.raises(ValidationError):
@@ -173,7 +176,7 @@ class TestLoadConfig:
         cfg_file = tmp_path / CONFIG_FILENAME
         cfg_file.write_text(
             '[compilation]\nengine = "lualatex"\npasses = "auto"\ntimeout = 120\n\n'
-            "[validation]\nstrict = true\nmax_errors = 5\n\n"
+            "[validation]\nstrict = true\n\n"
             '[cleanup]\ndry_run = true\nextensions = [".aux", ".log"]\n\n'
             "[pdf_info]\ninclude_text = true\n\n"
             "[detect_packages]\ncheck_installed = false\n"
@@ -183,7 +186,6 @@ class TestLoadConfig:
         assert cfg.compilation.passes == "auto"
         assert cfg.compilation.timeout == 120
         assert cfg.validation.strict is True
-        assert cfg.validation.max_errors == 5
         assert cfg.cleanup.dry_run is True
         assert cfg.cleanup.extensions == [".aux", ".log"]
         assert cfg.pdf_info.include_text is True
